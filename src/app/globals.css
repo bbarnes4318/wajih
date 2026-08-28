@@ -53,7 +53,10 @@
   /* Type */
   --text: #e9ecef;
   --text-muted: #8f979f;
-  --text-faint: #5f686f;
+  /* 4.94:1 against --surface — the original #5f686f measured 3.36:1, failing
+     WCAG AA (4.5:1) at the sub-14px sizes it's used at throughout (eyebrow
+     labels, table meta, timestamps). */
+  --text-faint: #7a838a;
   --text-inverted: #08090a;
 
   /* Brand + semantics */
@@ -127,7 +130,9 @@
 
   --text: #0d1117;
   --text-muted: #4d5866;
-  --text-faint: #8792a2;
+  /* 5.17:1 against --surface — the original #8792a2 measured 3.15:1, failing
+     WCAG AA (4.5:1) at the sub-14px sizes it's used at throughout. */
+  --text-faint: #656e7a;
   --text-inverted: #ffffff;
 
   --accent: #2563eb;
