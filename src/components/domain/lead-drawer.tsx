@@ -58,11 +58,11 @@ function Row({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <dt className="shrink-0 text-[12px] text-faint">{label}</dt>
+      <dt className="shrink-0 text-meta text-faint">{label}</dt>
       <dd
         className={cn(
-          "min-w-0 truncate text-right text-[13px] text-ink",
-          mono && "font-mono text-[12px] tabular",
+          "min-w-0 truncate text-right text-body text-ink",
+          mono && "font-mono text-meta tabular",
         )}
       >
         {children}
@@ -80,7 +80,7 @@ function Section({
 }) {
   return (
     <div className="panel p-3">
-      <h3 className="mb-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+      <h3 className="mb-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
         {title}
       </h3>
       <dl className="divide-y divide-[var(--border)]">{children}</dl>
@@ -147,7 +147,7 @@ export function LeadDrawer({
       title={
         <span className="flex items-center gap-2">
           <Hash className="size-3.5 text-faint" />
-          <span className="font-mono text-[13px]">
+          <span className="font-mono text-body">
             {leadId ? midTruncate(leadId, 12, 6) : ""}
           </span>
           {leadId && <CopyButton value={leadId} label="lead ID" />}
@@ -175,7 +175,7 @@ export function LeadDrawer({
       )}
 
       {error && (
-        <p className="p-8 text-center text-[14px] text-danger">
+        <p className="p-8 text-center text-ui text-danger">
           {error === "NOT_FOUND"
             ? "This lead does not exist, or is outside your access scope."
             : "Could not load this lead."}
@@ -316,7 +316,7 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
                   type="button"
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    "-mb-px flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[13px] transition-colors",
+                    "-mb-px flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-body transition-colors",
                     active
                       ? "border-accent font-medium text-ink"
                       : "border-transparent text-muted hover:text-ink",
@@ -341,27 +341,27 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
             <div className="space-y-3 p-5">
               {lead.consentTextCaptured && (
                 <div className="panel p-3">
-                  <h3 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                  <h3 className="mb-1.5 flex items-center gap-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                     <ShieldCheck className="size-3" />
                     Verbatim disclosure captured
                   </h3>
-                  <p className="text-[13px] leading-relaxed text-muted">
+                  <p className="text-body leading-relaxed text-muted">
                     {lead.consentTextCaptured}
                   </p>
                 </div>
               )}
               <div>
-                <h3 className="mb-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                <h3 className="mb-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                   Lead payload (JSONB)
                 </h3>
                 <JsonBlock value={lead.payload} maxHeight="32rem" />
               </div>
               {lead.ingressUserAgent && (
                 <div>
-                  <h3 className="mb-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                  <h3 className="mb-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                     User agent
                   </h3>
-                  <p className="font-mono text-[12px] leading-relaxed break-all text-muted">
+                  <p className="font-mono text-meta leading-relaxed break-all text-muted">
                     {lead.ingressUserAgent}
                   </p>
                 </div>
@@ -380,7 +380,7 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
                   <div key={d.id} className="panel overflow-hidden">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[12px] text-faint">
+                        <span className="font-mono text-meta text-faint">
                           #{d.attemptNumber}
                         </span>
                         <Badge
@@ -398,16 +398,16 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
                           {humanize(d.status)}
                         </Badge>
                         {d.responseStatus !== null && (
-                          <span className="font-mono text-[12px] text-muted">
+                          <span className="font-mono text-meta text-muted">
                             HTTP {d.responseStatus}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[12px] text-muted tabular">
+                        <span className="font-mono text-meta text-muted tabular">
                           {ms(d.latencyMs)}
                         </span>
-                        <span className="font-mono text-[11px] text-faint">
+                        <span className="font-mono text-micro text-faint">
                           {utcTimestamp(d.createdAt)}
                         </span>
                       </div>
@@ -416,17 +416,17 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
                     <div className="px-3 py-2">
                       <div className="mb-1 flex items-center gap-1.5">
                         <ExternalLink className="size-3 text-faint" />
-                        <span className="font-mono text-[12px] break-all text-muted">
+                        <span className="font-mono text-meta break-all text-muted">
                           {d.url}
                         </span>
                       </div>
                       {d.nextRetryAt && (
-                        <p className="text-[12px] text-warning">
+                        <p className="text-meta text-warning">
                           Next retry scheduled {utcTimestamp(d.nextRetryAt)}
                         </p>
                       )}
                       {d.errorLog && (
-                        <p className="mt-1 font-mono text-[12px] text-danger">
+                        <p className="mt-1 font-mono text-meta text-danger">
                           {d.errorLog}
                         </p>
                       )}
@@ -434,16 +434,16 @@ function LeadDrawerBody({ lead }: { lead: LeadDetailView }) {
 
                     <div className="grid gap-3 border-t border-line px-3 py-2.5 lg:grid-cols-2">
                       <div>
-                        <div className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                        <div className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                           Request headers
                         </div>
                         <JsonBlock value={d.requestHeaders} maxHeight="12rem" />
                       </div>
                       <div>
-                        <div className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                        <div className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                           Response body
                         </div>
-                        <pre className="max-h-48 overflow-auto rounded-md border border-line bg-sunken px-3 py-2.5 font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap text-muted">
+                        <pre className="max-h-48 overflow-auto rounded-md border border-line bg-sunken px-3 py-2.5 font-mono text-meta leading-relaxed break-words whitespace-pre-wrap text-muted">
                           {d.responseBody ?? "—"}
                         </pre>
                       </div>

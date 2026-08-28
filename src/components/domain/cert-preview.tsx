@@ -39,7 +39,7 @@ export function CertPreview({ lead }: { lead: LeadDetailView }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded border border-violet-border bg-violet-soft px-1.5 py-0.5 text-[12px] font-medium text-violet transition-opacity hover:opacity-80"
+        className="inline-flex items-center gap-1 rounded border border-violet-border bg-violet-soft px-1.5 py-0.5 text-meta font-medium text-violet transition-opacity hover:opacity-80"
       >
         <ShieldCheck className="size-3" />
         {kind}
@@ -69,15 +69,15 @@ export function CertPreview({ lead }: { lead: LeadDetailView }) {
         <div className="space-y-4">
           <dl className="panel divide-y divide-[var(--border)] p-3">
             <div className="flex items-baseline justify-between gap-3 py-1">
-              <dt className="text-[12px] text-faint">Provider</dt>
-              <dd className="text-[13px] text-ink">{kind}</dd>
+              <dt className="text-meta text-faint">Provider</dt>
+              <dd className="text-body text-ink">{kind}</dd>
             </div>
 
             {lead.trustedformCertUrl && (
               <div className="flex items-baseline justify-between gap-3 py-1">
-                <dt className="shrink-0 text-[12px] text-faint">Certificate URL</dt>
+                <dt className="shrink-0 text-meta text-faint">Certificate URL</dt>
                 <dd className="flex min-w-0 items-center gap-1">
-                  <span className="truncate font-mono text-[12px] text-muted">
+                  <span className="truncate font-mono text-meta text-muted">
                     {lead.trustedformCertUrl}
                   </span>
                   <CopyButton value={lead.trustedformCertUrl} label="certificate URL" />
@@ -87,9 +87,9 @@ export function CertPreview({ lead }: { lead: LeadDetailView }) {
 
             {lead.jornayaLeadId && (
               <div className="flex items-baseline justify-between gap-3 py-1">
-                <dt className="shrink-0 text-[12px] text-faint">Jornaya LeadiD</dt>
+                <dt className="shrink-0 text-meta text-faint">Jornaya LeadiD</dt>
                 <dd className="flex min-w-0 items-center gap-1">
-                  <span className="truncate font-mono text-[12px] text-muted">
+                  <span className="truncate font-mono text-meta text-muted">
                     {lead.jornayaLeadId}
                   </span>
                   <CopyButton value={lead.jornayaLeadId} label="Jornaya ID" />
@@ -98,30 +98,30 @@ export function CertPreview({ lead }: { lead: LeadDetailView }) {
             )}
 
             <div className="flex items-baseline justify-between gap-3 py-1">
-              <dt className="text-[12px] text-faint">Captured (UTC)</dt>
-              <dd className="font-mono text-[12px] text-muted tabular">
+              <dt className="text-meta text-faint">Captured (UTC)</dt>
+              <dd className="font-mono text-meta text-muted tabular">
                 {utcTimestamp(lead.receivedAtUtc)}
               </dd>
             </div>
 
             <div className="flex items-baseline justify-between gap-3 py-1">
-              <dt className="text-[12px] text-faint">Ingress IP</dt>
-              <dd className="font-mono text-[12px] text-muted">
+              <dt className="text-meta text-faint">Ingress IP</dt>
+              <dd className="font-mono text-meta text-muted">
                 {lead.ingressIp ?? "—"}
               </dd>
             </div>
           </dl>
 
           <div>
-            <h3 className="mb-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+            <h3 className="mb-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
               Verbatim disclosure captured at submission
             </h3>
             {lead.consentTextCaptured ? (
-              <blockquote className="rounded-md border border-line bg-sunken px-3 py-2.5 text-[13px] leading-relaxed text-muted">
+              <blockquote className="rounded-md border border-line bg-sunken px-3 py-2.5 text-body leading-relaxed text-muted">
                 {lead.consentTextCaptured}
               </blockquote>
             ) : (
-              <p className="flex items-center gap-1.5 rounded-md border border-danger-border bg-danger-soft px-3 py-2 text-[13px] text-danger">
+              <p className="flex items-center gap-1.5 rounded-md border border-danger-border bg-danger-soft px-3 py-2 text-body text-danger">
                 <ShieldX className="size-3.5 shrink-0" />
                 No disclosure text was captured with this certificate.
               </p>
@@ -130,10 +130,10 @@ export function CertPreview({ lead }: { lead: LeadDetailView }) {
 
           {lead.ingressUserAgent && (
             <div>
-              <h3 className="mb-1.5 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+              <h3 className="mb-1.5 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                 Submitting user agent
               </h3>
-              <p className="font-mono text-[12px] leading-relaxed break-all text-muted">
+              <p className="font-mono text-meta leading-relaxed break-all text-muted">
                 {lead.ingressUserAgent}
               </p>
             </div>

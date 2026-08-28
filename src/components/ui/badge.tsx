@@ -30,7 +30,7 @@ export function Badge({
       title={title}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border font-medium whitespace-nowrap",
-        size === "sm" ? "px-1.5 py-0.5 text-[12px]" : "px-2 py-1 text-xs",
+        size === "sm" ? "px-1.5 py-0.5 text-meta" : "px-2 py-1 text-xs",
         TONE_CLASS[tone],
         className,
       )}

@@ -58,7 +58,7 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
   return (
     <>
       {error && (
-        <div className="border-b border-danger-border bg-danger-soft px-4 py-2 text-[13px] text-danger">
+        <div className="border-b border-danger-border bg-danger-soft px-4 py-2 text-body text-danger">
           {error}
         </div>
       )}
@@ -84,7 +84,7 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
                 className="min-w-[13rem] flex-1 text-left"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[14px] font-medium text-ink">
+                  <span className="text-ui font-medium text-ink">
                     {lead.contactName}
                   </span>
                   <Badge tone="neutral" className="font-mono">
@@ -96,14 +96,14 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
                     </Badge>
                   )}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-meta text-muted">
                   <span className="font-mono tabular">
                     {phoneDisplay(lead.contactPhone)}
                   </span>
                   <span className="text-faint">·</span>
                   <span className="truncate">{lead.contactEmail}</span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-faint">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-micro text-faint">
                   <span className="text-accent">{lead.sourceId}</span>
                   <span>·</span>
                   <span>{utcTimestamp(lead.deliveredAt)}</span>
@@ -112,13 +112,13 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
 
               {/* Campaign + price */}
               <div className="min-w-[9rem]">
-                <div className="truncate text-[13px] text-ink">
+                <div className="truncate text-body text-ink">
                   {lead.campaignName ?? "—"}
                 </div>
-                <div className="text-[12px] text-muted">
+                <div className="text-meta text-muted">
                   {verticalLabel(lead.vertical)}
                 </div>
-                <div className="mt-0.5 font-mono text-[13px] text-ink tabular">
+                <div className="mt-0.5 font-mono text-body text-ink tabular">
                   {money(lead.buyerCostAmount)}
                 </div>
               </div>

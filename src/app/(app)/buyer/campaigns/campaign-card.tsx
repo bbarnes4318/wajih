@@ -167,10 +167,10 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
         {!editing && (
           <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+              <h4 className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                 Geography
               </h4>
-              <p className="text-[13px] leading-relaxed text-muted">
+              <p className="text-body leading-relaxed text-muted">
                 {campaign.acceptedStates.length === 0
                   ? "All states"
                   : campaign.acceptedStates.join(", ")}
@@ -179,18 +179,18 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
               </p>
             </div>
             <div>
-              <h4 className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+              <h4 className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                 Delivery endpoint
               </h4>
-              <p className="font-mono text-[12px] break-all text-muted">
+              <p className="font-mono text-meta break-all text-muted">
                 {campaign.deliveryWebhookUrl}
               </p>
             </div>
             <div className="sm:col-span-2">
-              <h4 className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+              <h4 className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                 Qualifier criteria
               </h4>
-              <pre className="overflow-auto rounded-md border border-line bg-sunken px-3 py-2 font-mono text-[12px] leading-relaxed text-muted">
+              <pre className="overflow-auto rounded-md border border-line bg-sunken px-3 py-2 font-mono text-meta leading-relaxed text-muted">
                 {JSON.stringify(campaign.criteriaJson, null, 2)}
               </pre>
             </div>
@@ -248,7 +248,7 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
               <Input
                 name="deliveryWebhookUrl"
                 defaultValue={campaign.deliveryWebhookUrl}
-                className="font-mono text-[12px]"
+                className="font-mono text-meta"
               />
             </Field>
 
@@ -260,7 +260,7 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
                 <Input
                   name="acceptedStates"
                   defaultValue={campaign.acceptedStates.join(", ")}
-                  className="font-mono text-[12px]"
+                  className="font-mono text-meta"
                   placeholder="AZ, CA, FL"
                 />
               </Field>
@@ -271,7 +271,7 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
                 <Input
                   name="acceptedZips"
                   defaultValue={campaign.acceptedZips.join(", ")}
-                  className="font-mono text-[12px]"
+                  className="font-mono text-meta"
                   placeholder="85004, 92101"
                 />
               </Field>
@@ -285,11 +285,11 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
                 name="criteriaJson"
                 rows={8}
                 defaultValue={JSON.stringify(campaign.criteriaJson, null, 2)}
-                className="font-mono text-[12px]"
+                className="font-mono text-meta"
               />
             </Field>
 
-            <label className="flex items-center gap-2 text-[13px] text-ink">
+            <label className="flex items-center gap-2 text-body text-ink">
               <input
                 type="checkbox"
                 name="active"
@@ -316,8 +316,8 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
           </form>
         )}
 
-        {error && <p className="text-[13px] text-danger">{error}</p>}
-        {message && <p className="text-[13px] text-success">{message}</p>}
+        {error && <p className="text-body text-danger">{error}</p>}
+        {message && <p className="text-body text-success">{message}</p>}
       </PanelBody>
     </Panel>
   );

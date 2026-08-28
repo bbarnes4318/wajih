@@ -30,7 +30,7 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2">
-      <span className="font-mono text-[12px] text-muted tabular">
+      <span className="font-mono text-meta text-muted tabular">
         {first}–{last} of {total}
       </span>
       <div className="flex items-center gap-1">
@@ -43,7 +43,7 @@ export function Pagination({
           <ChevronLeft className="size-3.5" />
           Prev
         </Button>
-        <span className="px-2 font-mono text-[12px] text-muted tabular">
+        <span className="px-2 font-mono text-meta text-muted tabular">
           {page} / {pageCount}
         </span>
         <Button

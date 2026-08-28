@@ -89,13 +89,13 @@ export function VolumeChart({
             ["Filtered", "bg-warning/55"],
             ["Rejected", "bg-danger/70"],
           ].map(([label, cls]) => (
-            <span key={label} className="flex items-center gap-1 text-[11px] text-faint">
+            <span key={label} className="flex items-center gap-1 text-micro text-faint">
               <span className={cn("size-2 rounded-[2px]", cls)} />
               {label}
             </span>
           ))}
         </div>
-        <span className="font-mono text-[11px] text-faint tabular">
+        <span className="font-mono text-micro text-faint tabular">
           {shortDate(data[0].day)} → {shortDate(data[data.length - 1].day)}
         </span>
       </div>
@@ -145,11 +145,11 @@ export function PipelineFunnel({
         return (
           <li key={stage}>
             <div className="mb-1 flex items-baseline justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-[12px] text-muted">
+              <span className="flex items-center gap-1.5 text-meta text-muted">
                 <span className={cn("size-1.5 rounded-full", TONE_DOT[meta.tone])} />
                 {meta.label}
               </span>
-              <span className="font-mono text-[12px] text-ink tabular">
+              <span className="font-mono text-meta text-ink tabular">
                 {count(value)}
               </span>
             </div>
@@ -196,18 +196,18 @@ export function RejectionBars({
           <li key={`${r.code}-${r.step}`}>
             <div className="mb-1 flex items-baseline justify-between gap-2">
               <span
-                className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted"
+                className="flex min-w-0 items-center gap-1.5 text-meta text-muted"
                 title={meta.help}
               >
                 <span className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[meta.tone])} />
                 <span className="truncate">{meta.label}</span>
                 {r.step && (
-                  <span className="shrink-0 font-mono text-[11px] text-faint">
+                  <span className="shrink-0 font-mono text-micro text-faint">
                     {REJECTION_STEP[r.step].label.split(" ")[0]}
                   </span>
                 )}
               </span>
-              <span className="shrink-0 font-mono text-[12px] text-ink tabular">
+              <span className="shrink-0 font-mono text-meta text-ink tabular">
                 {count(r.count)}
                 <span className="ml-1 text-faint">
                   {((r.count / total) * 100).toFixed(0)}%
@@ -224,6 +224,70 @@ export function RejectionBars({
         );
       })}
     </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  Sparkline — a small trend line for a StatTile
+// ---------------------------------------------------------------------------
+
+const SPARKLINE_STROKE: Record<"accent" | "success" | "warning" | "danger", string> = {
+  accent: "stroke-accent",
+  success: "stroke-success",
+  warning: "stroke-warning",
+  danger: "stroke-danger",
+};
+
+const SPARKLINE_FILL: Record<"accent" | "success" | "warning" | "danger", string> = {
+  accent: "fill-accent/10",
+  success: "fill-success/10",
+  warning: "fill-warning/10",
+  danger: "fill-danger/10",
+};
+
+/** Decorative — the tile's own number and label already carry the value. */
+export function Sparkline({
+  data,
+  tone = "accent",
+  className,
+}: {
+  data: number[];
+  tone?: "accent" | "success" | "warning" | "danger";
+  className?: string;
+}) {
+  if (data.length < 2) return null;
+
+  const width = 100;
+  const height = 32;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  const area = `0,${height} ${points.join(" ")} ${width},${height}`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      aria-hidden
+      className={cn("h-full w-full overflow-visible", className)}
+    >
+      <polyline points={area} stroke="none" className={SPARKLINE_FILL[tone]} />
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+        className={SPARKLINE_STROKE[tone]}
+      />
+    </svg>
   );
 }
 
@@ -245,7 +309,7 @@ export function PacingBar({
 }) {
   if (fill === null) {
     return (
-      <div className={cn("text-[12px] text-faint", className)}>
+      <div className={cn("text-meta text-faint", className)}>
         {label}
         <span className="ml-1">uncapped</span>
       </div>
@@ -259,8 +323,8 @@ export function PacingBar({
   return (
     <div className={className}>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="text-[12px] text-muted">{label}</span>
-        <span className="font-mono text-[12px] text-ink tabular">
+        <span className="text-meta text-muted">{label}</span>
+        <span className="font-mono text-meta text-ink tabular">
           {(fill * 100).toFixed(0)}%
         </span>
       </div>
@@ -271,7 +335,7 @@ export function PacingBar({
         />
       </div>
       {sublabel && (
-        <div className="mt-1 font-mono text-[11px] text-faint tabular">{sublabel}</div>
+        <div className="mt-1 font-mono text-micro text-faint tabular">{sublabel}</div>
       )}
     </div>
   );

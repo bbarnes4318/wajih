@@ -42,7 +42,7 @@ export function PanelHeader({
       <div className="flex min-w-0 items-start gap-2.5">
         {icon && <span className="mt-0.5 text-faint">{icon}</span>}
         <div className="min-w-0">
-          <h2 className="truncate text-[14px] font-semibold tracking-tight text-ink">
+          <h2 className="truncate text-ui font-semibold tracking-tight text-ink">
             {title}
           </h2>
           {subtitle && (

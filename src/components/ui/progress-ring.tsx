@@ -63,7 +63,7 @@ export function ProgressRing({
         />
       </svg>
       {label && (
-        <span className="absolute font-mono text-[11px] font-medium text-ink tabular">
+        <span className="absolute font-mono text-micro font-medium text-ink tabular">
           {label}
         </span>
       )}

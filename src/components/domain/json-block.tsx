@@ -30,7 +30,7 @@ export function JsonBlock({
       style={{ maxHeight }}
       className={cn(
         "overflow-auto rounded-md border border-line bg-sunken px-3 py-2.5",
-        "font-mono text-[12px] leading-relaxed whitespace-pre text-muted",
+        "font-mono text-meta leading-relaxed whitespace-pre text-muted",
         className,
       )}
     >

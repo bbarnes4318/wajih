@@ -76,22 +76,22 @@ export function NotificationList({
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[14px] font-medium text-ink">{n.title}</span>
+                <span className="text-ui font-medium text-ink">{n.title}</span>
                 <Badge tone="neutral" className="font-mono">
                   {n.code}
                 </Badge>
                 {!n.readAt && <Badge tone="accent">New</Badge>}
               </div>
 
-              <div className="mt-0.5 text-[13px] leading-relaxed text-muted">
+              <div className="mt-0.5 text-body leading-relaxed text-muted">
                 {known ? (
                   <span title={known.help}>{known.label}</span>
                 ) : (
-                  <span className="font-mono text-[12px]">{n.body}</span>
+                  <span className="font-mono text-meta">{n.body}</span>
                 )}
               </div>
 
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-faint">
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-micro text-faint">
                 <span title={utcTimestamp(n.createdAt)}>{relativeTime(n.createdAt)}</span>
                 {n.leadId && (
                   <>

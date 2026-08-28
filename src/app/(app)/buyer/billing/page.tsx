@@ -146,7 +146,7 @@ export default async function BuyerBillingPage() {
                       {["Vertical", "Leads", "Spend", "Avg CPL"].map((h) => (
                         <th
                           key={h}
-                          className="px-3.5 py-2.5 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase"
+                          className="px-3.5 py-2.5 text-micro font-semibold tracking-[0.08em] text-faint uppercase"
                         >
                           {h}
                         </th>
@@ -161,16 +161,16 @@ export default async function BuyerBillingPage() {
                           key={v.vertical}
                           className="border-b border-line last:border-0"
                         >
-                          <td className="px-3.5 py-2.5 text-[13px] text-ink">
+                          <td className="px-3.5 py-2.5 text-body text-ink">
                             {verticalLabel(v.vertical)}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-muted tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-meta text-muted tabular">
                             {count(v._count._all)}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[13px] text-ink tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-body text-ink tabular">
                             {money(total)}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-muted tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-meta text-muted tabular">
                             {money(v._count._all === 0 ? 0 : total / v._count._all)}
                           </td>
                         </tr>
@@ -197,7 +197,7 @@ export default async function BuyerBillingPage() {
                       {["Campaign", "Leads", "Spend", "Share"].map((h) => (
                         <th
                           key={h}
-                          className="px-3.5 py-2.5 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase"
+                          className="px-3.5 py-2.5 text-micro font-semibold tracking-[0.08em] text-faint uppercase"
                         >
                           {h}
                         </th>
@@ -212,16 +212,16 @@ export default async function BuyerBillingPage() {
                           key={c.campaignId ?? "unrouted"}
                           className="border-b border-line last:border-0"
                         >
-                          <td className="px-3.5 py-2.5 text-[13px] text-ink">
+                          <td className="px-3.5 py-2.5 text-body text-ink">
                             {c.campaignId ? (nameById.get(c.campaignId) ?? "—") : "—"}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-muted tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-meta text-muted tabular">
                             {count(c._count._all)}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[13px] text-ink tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-body text-ink tabular">
                             {money(total)}
                           </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-muted tabular">
+                          <td className="px-3.5 py-2.5 text-right font-mono text-meta text-muted tabular">
                             {percent(
                               billableTotal === 0 ? 0 : total / billableTotal,
                               0,
@@ -254,7 +254,7 @@ export default async function BuyerBillingPage() {
                         (h) => (
                           <th
                             key={h}
-                            className="px-3.5 py-2.5 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase"
+                            className="px-3.5 py-2.5 text-micro font-semibold tracking-[0.08em] text-faint uppercase"
                           >
                             {h}
                           </th>
@@ -265,19 +265,19 @@ export default async function BuyerBillingPage() {
                   <tbody>
                     {byDay.map((d) => (
                       <tr key={d.id} className="border-b border-line last:border-0">
-                        <td className="px-3.5 py-2.5 font-mono text-[12px] text-muted">
+                        <td className="px-3.5 py-2.5 font-mono text-meta text-muted">
                           {shortDate(d.statDate)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-[13px] text-ink">
+                        <td className="px-3.5 py-2.5 text-body text-ink">
                           {d.campaign.name}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-ink tabular">
+                        <td className="px-3.5 py-2.5 text-right font-mono text-meta text-ink tabular">
                           {count(d.leadsDelivered)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-danger tabular">
+                        <td className="px-3.5 py-2.5 text-right font-mono text-meta text-danger tabular">
                           {count(d.leadsReturned)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono text-[13px] text-ink tabular">
+                        <td className="px-3.5 py-2.5 text-right font-mono text-body text-ink tabular">
                           {money(d.spendAmount)}
                         </td>
                       </tr>

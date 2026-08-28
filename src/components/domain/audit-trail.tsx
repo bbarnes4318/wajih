@@ -71,10 +71,10 @@ export function AuditTrail({ rows }: { rows: AuditRow[] }) {
   return (
     <div>
       <div className="flex items-center justify-between border-b border-line bg-sunken px-5 py-2">
-        <span className="text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
+        <span className="text-micro font-semibold tracking-[0.08em] text-faint uppercase">
           Execution trail · {rows.length} steps
         </span>
-        <span className="font-mono text-[12px] text-muted tabular">
+        <span className="font-mono text-meta text-muted tabular">
           {ms(totalMs)} total
         </span>
       </div>
@@ -108,10 +108,10 @@ export function AuditTrail({ rows }: { rows: AuditRow[] }) {
               <div className="panel overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-mono text-[12px] text-faint">
+                    <span className="font-mono text-meta text-faint">
                       {String(row.stepNumber).padStart(2, "0")}
                     </span>
-                    <span className="truncate text-[14px] font-medium text-ink">
+                    <span className="truncate text-ui font-medium text-ink">
                       {row.stepName}
                     </span>
                     {row.reasonCode && <ReasonChip code={row.reasonCode} />}
@@ -128,7 +128,7 @@ export function AuditTrail({ rows }: { rows: AuditRow[] }) {
                         style={{ width: `${Math.max(4, share * 100)}%` }}
                       />
                     </span>
-                    <span className="font-mono text-[12px] text-muted tabular">
+                    <span className="font-mono text-meta text-muted tabular">
                       {ms(row.executionMs)}
                     </span>
                   </div>
@@ -136,13 +136,13 @@ export function AuditTrail({ rows }: { rows: AuditRow[] }) {
 
                 <div className="grid gap-3 px-3 py-2.5 lg:grid-cols-2">
                   <div>
-                    <div className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                    <div className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                       Input
                     </div>
                     <JsonBlock value={row.inputData} maxHeight="14rem" />
                   </div>
                   <div>
-                    <div className="mb-1 text-[11px] font-semibold tracking-[0.07em] text-faint uppercase">
+                    <div className="mb-1 text-micro font-semibold tracking-[0.07em] text-faint uppercase">
                       Output
                     </div>
                     <JsonBlock value={row.outputData} maxHeight="14rem" />
@@ -151,17 +151,17 @@ export function AuditTrail({ rows }: { rows: AuditRow[] }) {
 
                 {row.errorLog && (
                   <div className="border-t border-danger-border bg-danger-soft px-3 py-2">
-                    <div className="mb-0.5 text-[11px] font-semibold tracking-[0.07em] text-danger uppercase">
+                    <div className="mb-0.5 text-micro font-semibold tracking-[0.07em] text-danger uppercase">
                       Error log
                     </div>
-                    <p className="font-mono text-[12px] leading-relaxed break-words text-danger">
+                    <p className="font-mono text-meta leading-relaxed break-words text-danger">
                       {row.errorLog}
                     </p>
                   </div>
                 )}
 
                 <div className="border-t border-line bg-sunken px-3 py-1.5">
-                  <span className="font-mono text-[11px] text-faint">
+                  <span className="font-mono text-micro text-faint">
                     {utcTimestamp(row.createdAt)}
                   </span>
                 </div>

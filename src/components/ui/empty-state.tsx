@@ -22,7 +22,7 @@ export function EmptyState({
       )}
     >
       {icon && <div className="text-faint [&_svg]:size-6">{icon}</div>}
-      <p className="text-[14px] font-medium text-ink">{title}</p>
+      <p className="text-ui font-medium text-ink">{title}</p>
       {description && (
         <p className="max-w-sm text-xs leading-relaxed text-muted">{description}</p>
       )}

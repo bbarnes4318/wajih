@@ -28,6 +28,24 @@ export const metadata: Metadata = { title: "Buyer Overview" };
  * Query bundle. Kept out of the component so the rolling window and today's
  * pacing date are computed where reading the clock is expected.
  */
+/** Trailing 7 UTC days of spend, oldest first — feeds the Spend tile's sparkline. */
+async function loadDailySpend(orgId: string) {
+  const days = 7;
+  const start = utcDayStart(new Date(Date.now() - (days - 1) * 86_400_000));
+  const rows = await prisma.campaignDailyStat.groupBy({
+    by: ["statDate"],
+    where: { campaign: { buyerOrgId: orgId }, statDate: { gte: start } },
+    _sum: { spendAmount: true },
+  });
+  const byDate = new Map(
+    rows.map((r) => [r.statDate.toISOString(), Number(r._sum.spendAmount ?? 0)]),
+  );
+  return Array.from({ length: days }, (_, i) => {
+    const d = utcDayStart(new Date(start.getTime() + i * 86_400_000));
+    return byDate.get(d.toISOString()) ?? 0;
+  });
+}
+
 async function loadOverview(orgId: string) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
   const statDate = utcDayStart(new Date());
@@ -42,6 +60,7 @@ async function loadOverview(orgId: string) {
     campaigns,
     expiringSoon,
     reasonMix,
+    dailySpend,
   ] = await Promise.all([
     prisma.lead.count({
       where: { buyerOrgId: orgId, deliveredAt: { gte: thirtyDaysAgo } },
@@ -113,6 +132,7 @@ async function loadOverview(orgId: string) {
       _count: { _all: true },
       orderBy: { _count: { disputeReasonCode: "desc" } },
     }),
+    loadDailySpend(orgId),
   ]);
 
   return {
@@ -125,6 +145,7 @@ async function loadOverview(orgId: string) {
     campaigns,
     expiringSoon,
     reasonMix,
+    dailySpend,
   };
 }
 
@@ -140,6 +161,7 @@ export default async function BuyerOverviewPage() {
     campaigns,
     expiringSoon,
     reasonMix,
+    dailySpend,
   } = await loadOverview(user.orgId);
 
   const spend = Number(spendAgg._sum.buyerCostAmount ?? 0);
@@ -161,8 +183,8 @@ export default async function BuyerOverviewPage() {
         }
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5 xl:p-6">
-        <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 xl:p-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
             label="Delivered"
             value={count(delivered)}
@@ -173,12 +195,14 @@ export default async function BuyerOverviewPage() {
             label="Spend"
             value={money(spend)}
             icon={<CircleDollarSign />}
+            size="hero"
+            sparkline={dailySpend}
             sub={
               delivered > 0
                 ? `${money(spend / Math.max(1, delivered))} effective CPL`
                 : undefined
             }
-            help="Excludes leads where a return was approved."
+            help="Excludes leads where a return was approved. Trend is the last 7 days."
           />
           <StatTile
             label="Accepted"
@@ -222,20 +246,20 @@ export default async function BuyerOverviewPage() {
                       className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5"
                     >
                       <div className="min-w-[11rem] flex-1">
-                        <div className="text-[13px] text-ink">
+                        <div className="text-body text-ink">
                           {[l.contactFirstName, l.contactLastName]
                             .filter(Boolean)
                             .join(" ") || "—"}
                         </div>
-                        <div className="font-mono text-[12px] text-muted tabular">
+                        <div className="font-mono text-meta text-muted tabular">
                           {phoneDisplay(l.contactPhone)} · {l.contactState}
                         </div>
                       </div>
-                      <div className="min-w-[9rem] text-[12px] text-muted">
+                      <div className="min-w-[9rem] text-meta text-muted">
                         <div className="truncate text-ink">{l.campaign?.name ?? "—"}</div>
                         <div>{verticalLabel(l.vertical)}</div>
                       </div>
-                      <span className="font-mono text-[13px] text-ink tabular">
+                      <span className="font-mono text-body text-ink tabular">
                         {money(l.buyerCostAmount)}
                       </span>
                       <CountdownBadge
@@ -270,7 +294,7 @@ export default async function BuyerOverviewPage() {
                         <Badge tone={meta.tone} title={meta.help}>
                           {meta.label}
                         </Badge>
-                        <span className="font-mono text-[13px] text-ink tabular">
+                        <span className="font-mono text-body text-ink tabular">
                           {r._count._all}
                         </span>
                       </li>
@@ -279,7 +303,7 @@ export default async function BuyerOverviewPage() {
                 </ul>
               )}
               {disputesOpen > 0 && (
-                <p className="mt-3 border-t border-line pt-2 text-[12px] leading-relaxed text-warning">
+                <p className="mt-3 border-t border-line pt-2 text-meta leading-relaxed text-warning">
                   {count(disputesOpen)} of your disputes are awaiting adjudication by
                   network operations.
                 </p>
@@ -288,7 +312,7 @@ export default async function BuyerOverviewPage() {
           </Panel>
         </div>
 
-        <Panel className="mt-3">
+        <Panel>
           <PanelHeader
             icon={<Target className="size-3.5" />}
             title="Campaign pacing — today"
@@ -307,7 +331,7 @@ export default async function BuyerOverviewPage() {
                       (h) => (
                         <th
                           key={h}
-                          className="px-3.5 py-2.5 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase"
+                          className="px-3.5 py-2.5 text-micro font-semibold tracking-[0.08em] text-faint uppercase"
                         >
                           {h}
                         </th>
@@ -323,11 +347,11 @@ export default async function BuyerOverviewPage() {
                     const budget = Number(c.dailyBudget);
                     return (
                       <tr key={c.id} className="border-b border-line last:border-0">
-                        <td className="px-3.5 py-2.5 text-[13px] text-ink">{c.name}</td>
-                        <td className="px-3.5 py-2.5 text-[13px] text-muted">
+                        <td className="px-3.5 py-2.5 text-body text-ink">{c.name}</td>
+                        <td className="px-3.5 py-2.5 text-body text-muted">
                           {verticalLabel(c.vertical)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono text-[12px] text-ink tabular">
+                        <td className="px-3.5 py-2.5 text-right font-mono text-meta text-ink tabular">
                           {money(c.maxCpl)}
                         </td>
                         <td className="min-w-[9rem] px-3.5 py-2.5">

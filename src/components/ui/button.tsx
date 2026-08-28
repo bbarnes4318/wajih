@@ -21,9 +21,9 @@ const button = cva(
         link: "text-accent hover:underline underline-offset-4 h-auto p-0",
       },
       size: {
-        xs: "h-6 px-2 text-[12px] [&_svg]:size-3",
+        xs: "h-6 px-2 text-meta [&_svg]:size-3",
         sm: "h-7 px-2.5 text-xs [&_svg]:size-3.5",
-        md: "h-8 px-3 text-[14px] [&_svg]:size-4",
+        md: "h-8 px-3 text-ui [&_svg]:size-4",
         lg: "h-10 px-4 text-sm [&_svg]:size-4",
         icon: "size-7 [&_svg]:size-4",
       },

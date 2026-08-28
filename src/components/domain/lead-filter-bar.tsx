@@ -61,7 +61,7 @@ export function LeadFilterBar({
           type="button"
           onClick={() => setParam("stage", null)}
           className={cn(
-            "shrink-0 rounded-md border px-2 py-1 text-[12px] font-medium whitespace-nowrap transition-colors",
+            "shrink-0 rounded-md border px-2 py-1 text-meta font-medium whitespace-nowrap transition-colors",
             !activeStage
               ? "border-accent-border bg-accent-soft text-accent"
               : "border-line text-muted hover:bg-hover hover:text-ink",
@@ -82,7 +82,7 @@ export function LeadFilterBar({
               onClick={() => setParam("stage", active ? null : stage)}
               title={meta.help}
               className={cn(
-                "shrink-0 rounded-md border px-2 py-1 text-[12px] font-medium whitespace-nowrap transition-colors",
+                "shrink-0 rounded-md border px-2 py-1 text-meta font-medium whitespace-nowrap transition-colors",
                 active
                   ? "border-accent-border bg-accent-soft text-accent"
                   : "border-line text-muted hover:bg-hover hover:text-ink",
@@ -102,7 +102,7 @@ export function LeadFilterBar({
           <Input
             defaultValue={params.get("q") ?? ""}
             placeholder="Search lead ID, phone, email, name or Source ID…"
-            className="pl-7 font-mono text-[12px]"
+            className="pl-7 font-mono text-meta"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 setParam("q", (e.target as HTMLInputElement).value.trim() || null);
@@ -160,7 +160,7 @@ export function LeadFilterBar({
         <NativeSelect
           value={params.get("source") ?? ""}
           onChange={(e) => setParam("source", e.target.value || null)}
-          className="w-auto min-w-[11rem] font-mono text-[12px]"
+          className="w-auto min-w-[11rem] font-mono text-meta"
           aria-label="Source ID"
         >
           <option value="">All sources</option>
@@ -175,14 +175,14 @@ export function LeadFilterBar({
           type="date"
           value={params.get("from") ?? ""}
           onChange={(e) => setParam("from", e.target.value || null)}
-          className="w-auto font-mono text-[12px]"
+          className="w-auto font-mono text-meta"
           aria-label="From date"
         />
         <Input
           type="date"
           value={params.get("to") ?? ""}
           onChange={(e) => setParam("to", e.target.value || null)}
-          className="w-auto font-mono text-[12px]"
+          className="w-auto font-mono text-meta"
           aria-label="To date"
         />
 
@@ -202,7 +202,7 @@ export function LeadFilterBar({
 
         <span
           className={cn(
-            "ml-auto flex items-center gap-1.5 text-[12px] whitespace-nowrap text-faint transition-opacity",
+            "ml-auto flex items-center gap-1.5 text-meta whitespace-nowrap text-faint transition-opacity",
             pending && "opacity-100",
           )}
         >

@@ -46,14 +46,14 @@ export function Sidebar({
     >
       {/* Brand */}
       <div className="flex h-14 items-center gap-2.5 border-b border-line px-4">
-        <div className="grid size-7 place-items-center rounded-md bg-accent text-[13px] font-bold text-white shadow-[var(--shadow-sm)]">
+        <div className="grid size-7 place-items-center rounded-md bg-accent text-body font-bold text-white shadow-[var(--shadow-sm)]">
           L
         </div>
         <div className="min-w-0 leading-none">
-          <div className="truncate text-[14px] font-semibold tracking-tight text-ink">
+          <div className="truncate text-ui font-semibold tracking-tight text-ink">
             LeadOS
           </div>
-          <div className="mt-0.5 truncate text-[11px] tracking-wide text-faint uppercase">
+          <div className="mt-0.5 truncate text-micro tracking-wide text-faint uppercase">
             {PORTAL_LABEL[role]}
           </div>
         </div>
@@ -76,7 +76,7 @@ export function Sidebar({
       <div className="min-h-0 flex-1 overflow-y-auto py-3">
         {sections.map((section) => (
           <div key={section.label} className="mb-4 px-2 last:mb-0">
-            <div className="mb-1 px-2 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
+            <div className="mb-1 px-2 text-micro font-semibold tracking-[0.08em] text-faint uppercase">
               {section.label}
             </div>
             <ul className="space-y-px">
@@ -88,7 +88,7 @@ export function Sidebar({
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-ui transition-colors",
                         active
                           ? "bg-accent-soft font-medium text-accent before:absolute before:top-1.5 before:bottom-1.5 before:-left-2.5 before:w-0.5 before:rounded-r before:bg-accent"
                           : "text-muted hover:bg-hover hover:text-ink",

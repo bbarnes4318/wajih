@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/tooltip";
+import { Sparkline } from "@/components/domain/charts";
 
 /**
  * KPI tile.
@@ -9,7 +10,9 @@ import { Tooltip } from "@/components/ui/tooltip";
  * The number is the point, so it gets real size — a wall of 20px figures in
  * identical boxes reads as a spreadsheet, not a dashboard. `delta` is a
  * fraction (0.12 = +12%); `goodDirection` says which way is healthy, because a
- * rising return rate is bad while rising revenue is good.
+ * rising return rate is bad while rising revenue is good. `size="hero"` is for
+ * the one number on a page that matters most — everything else on the row
+ * stays `"standard"` so the hero doesn't have to compete for attention.
  */
 export function StatTile({
   label,
@@ -20,6 +23,8 @@ export function StatTile({
   icon,
   help,
   accent,
+  size = "standard",
+  sparkline,
   className,
 }: {
   label: string;
@@ -30,17 +35,22 @@ export function StatTile({
   icon?: ReactNode;
   help?: string;
   accent?: "success" | "warning" | "danger" | "accent";
+  size?: "standard" | "hero";
+  /** Trailing values, oldest first — renders as a small trend line under the figure. */
+  sparkline?: number[];
   className?: string;
 }) {
   const hasDelta = typeof delta === "number" && Number.isFinite(delta);
   const rising = hasDelta && delta > 0.0001;
   const falling = hasDelta && delta < -0.0001;
   const good = rising ? goodDirection === "up" : falling ? goodDirection === "down" : null;
+  const hero = size === "hero";
 
   const body = (
     <div
       className={cn(
-        "panel-glow relative flex flex-col justify-between gap-4 overflow-hidden p-4",
+        "panel-glow relative flex flex-col justify-between gap-4 overflow-hidden",
+        hero ? "p-5" : "p-4",
         accent === "danger" && "border-danger-border",
         accent === "warning" && "border-warning-border",
         accent === "success" && "border-success-border",
@@ -64,13 +74,19 @@ export function StatTile({
       )}
 
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
+        <span
+          className={cn(
+            "font-semibold tracking-[0.08em] text-muted uppercase",
+            hero ? "text-meta" : "text-micro",
+          )}
+        >
           {label}
         </span>
         {icon && (
           <span
             className={cn(
-              "grid size-7 shrink-0 place-items-center rounded-md [&_svg]:size-3.5",
+              "grid shrink-0 place-items-center rounded-md",
+              hero ? "size-8 [&_svg]:size-4" : "size-7 [&_svg]:size-3.5",
               accent === "danger"
                 ? "bg-danger-soft text-danger"
                 : accent === "warning"
@@ -88,7 +104,8 @@ export function StatTile({
       <div>
         <div
           className={cn(
-            "font-mono text-[28px] leading-none font-semibold tracking-[-0.02em] tabular",
+            "font-mono leading-none font-semibold tracking-[-0.02em] tabular",
+            hero ? "text-display" : "text-figure",
             accent === "danger" ? "text-danger" : "text-ink",
           )}
         >
@@ -100,7 +117,7 @@ export function StatTile({
             {hasDelta && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[12px] tabular",
+                  "inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-meta tabular",
                   good === null && "bg-chip text-faint",
                   good === true && "bg-success-soft text-success",
                   good === false && "bg-danger-soft text-danger",
@@ -116,7 +133,20 @@ export function StatTile({
                 {`${delta > 0 ? "+" : ""}${(delta * 100).toFixed(1)}%`}
               </span>
             )}
-            {sub && <span className="truncate text-[12px] text-muted">{sub}</span>}
+            {sub && <span className="truncate text-meta text-muted">{sub}</span>}
+          </div>
+        )}
+
+        {sparkline && sparkline.length >= 2 && (
+          <div className={hero ? "mt-3 h-9" : "mt-2.5 h-6"}>
+            <Sparkline
+              data={sparkline}
+              tone={
+                accent === "danger" || accent === "warning" || accent === "success"
+                  ? accent
+                  : "accent"
+              }
+            />
           </div>
         )}
       </div>
@@ -157,7 +187,7 @@ export function MiniStat({
             tone === "neutral" && "bg-faint",
           )}
         />
-        <span className="truncate text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
+        <span className="truncate text-micro font-semibold tracking-[0.08em] text-muted uppercase">
           {label}
         </span>
       </div>
@@ -170,7 +200,7 @@ export function MiniStat({
         {value}
       </div>
       {sub && (
-        <div className="mt-1 truncate text-[12px] leading-snug text-faint">{sub}</div>
+        <div className="mt-1 truncate text-meta leading-snug text-faint">{sub}</div>
       )}
     </div>
   );

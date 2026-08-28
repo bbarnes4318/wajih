@@ -132,7 +132,7 @@ export function DisputeModal({
                   : "text-muted",
             )}
           />
-          <div className="min-w-0 text-[13px]">
+          <div className="min-w-0 text-body">
             {window.expired ? (
               <span className="text-danger">
                 The return window closed. This lead has settled and can no longer be
@@ -155,7 +155,7 @@ export function DisputeModal({
 
         {/* Enum reasons */}
         <div>
-          <span className="mb-1.5 block text-[12px] font-medium tracking-wide text-muted uppercase">
+          <span className="mb-1.5 block text-meta font-medium tracking-wide text-muted uppercase">
             Reason code <span className="text-danger">*</span>
           </span>
           <div className="grid gap-1.5 sm:grid-cols-2">
@@ -177,16 +177,16 @@ export function DisputeModal({
                 >
                   <span
                     className={cn(
-                      "block text-[13px] font-medium",
+                      "block text-body font-medium",
                       selected ? "text-accent" : "text-ink",
                     )}
                   >
                     {meta.label}
                   </span>
-                  <span className="mt-0.5 block text-[12px] leading-snug text-muted">
+                  <span className="mt-0.5 block text-meta leading-snug text-muted">
                     {meta.help}
                   </span>
-                  <code className="mt-1 block font-mono text-[11px] text-faint">
+                  <code className="mt-1 block font-mono text-micro text-faint">
                     {code}
                   </code>
                 </button>
@@ -209,7 +209,7 @@ export function DisputeModal({
         </Field>
 
         {error && (
-          <p className="flex items-start gap-1.5 rounded-md border border-danger-border bg-danger-soft px-2.5 py-2 text-[13px] text-danger">
+          <p className="flex items-start gap-1.5 rounded-md border border-danger-border bg-danger-soft px-2.5 py-2 text-body text-danger">
             <CircleAlert className="mt-px size-3.5 shrink-0" />
             {error}
           </p>

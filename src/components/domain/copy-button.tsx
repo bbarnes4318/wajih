@@ -52,7 +52,7 @@ export function MonoId({
 }) {
   return (
     <span className={cn("group inline-flex items-center gap-1", className)}>
-      <span className="font-mono text-[12px] text-muted" title={value}>
+      <span className="font-mono text-meta text-muted" title={value}>
         {display ?? value}
       </span>
       <CopyButton value={value} label="identifier" className="opacity-0 group-hover:opacity-100" />

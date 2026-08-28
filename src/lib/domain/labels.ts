@@ -181,18 +181,26 @@ export const REJECTION_REASON: Record<RejectionReasonCode, EnumMeta> = {
 export const BUYER_STATUS: Record<BuyerLeadStatus, EnumMeta> = {
   PENDING: { label: "Pending", tone: "warning", help: "Inside the return window." },
   ACCEPTED: { label: "Accepted", tone: "success" },
-  DISPUTED: { label: "Disputed", tone: "danger" },
+  // Pending review by network operations — not yet a hard outcome, so it
+  // takes "info" (neutral system state) rather than "danger", which is
+  // reserved for an approved return. The reason code itself stays neutral
+  // (tone: "neutral" below) so a queue row never carries more than the two
+  // hue families (status + countdown) the hue budget allows.
+  DISPUTED: { label: "Disputed", tone: "info" },
   RETURN_APPROVED: { label: "Return Approved", tone: "danger", help: "Credited to the buyer; publisher payout voided." },
   RETURN_DENIED: { label: "Return Denied", tone: "success", help: "Lead stands as payable." },
 };
 
+// A dispute reason is a label explaining *why*, not a second status — the
+// status chip above already carries the severity. Every reason is "neutral"
+// (the "chip" family) so it never competes with BUYER_STATUS for attention.
 export const DISPUTE_REASON: Record<DisputeReasonCode, EnumMeta> = {
-  INVALID_DISCONNECT: { label: "Invalid / Disconnected", tone: "danger", help: "Number is out of service or unreachable." },
-  TCPA_MISMATCH: { label: "TCPA Mismatch", tone: "danger", help: "Consent record does not support outreach to this consumer." },
-  OUT_OF_GEOGRAPHY: { label: "Out of Geography", tone: "warning", help: "Delivered outside the campaign's accepted area." },
-  DUPLICATE_WITHIN_WINDOW: { label: "Duplicate in Window", tone: "violet", help: "Buyer already purchased this consumer inside the window." },
-  WRONG_PERSON: { label: "Wrong Person", tone: "warning", help: "Contact reached is not the person who inquired." },
-  BOGUS_CONTACT_INFO: { label: "Bogus Contact Info", tone: "danger", help: "Name, address or email is fabricated." },
+  INVALID_DISCONNECT: { label: "Invalid / Disconnected", tone: "neutral", help: "Number is out of service or unreachable." },
+  TCPA_MISMATCH: { label: "TCPA Mismatch", tone: "neutral", help: "Consent record does not support outreach to this consumer." },
+  OUT_OF_GEOGRAPHY: { label: "Out of Geography", tone: "neutral", help: "Delivered outside the campaign's accepted area." },
+  DUPLICATE_WITHIN_WINDOW: { label: "Duplicate in Window", tone: "neutral", help: "Buyer already purchased this consumer inside the window." },
+  WRONG_PERSON: { label: "Wrong Person", tone: "neutral", help: "Contact reached is not the person who inquired." },
+  BOGUS_CONTACT_INFO: { label: "Bogus Contact Info", tone: "neutral", help: "Name, address or email is fabricated." },
 };
 
 export const SETTLEMENT_STATUS: Record<SettlementStatus, EnumMeta> = {
