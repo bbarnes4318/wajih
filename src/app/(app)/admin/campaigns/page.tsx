@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Target } from "lucide-react";
+import { Inbox, Target } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PacingBar } from "@/components/domain/charts";
+import { CampaignRequestActions } from "./campaign-request-row";
 import { requireAdmin } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db/prisma";
 import { utcDayStart } from "@/lib/pipeline/normalize";
@@ -18,8 +19,9 @@ export default async function AdminCampaignsPage() {
   const user = await requireAdmin();
   const statDate = utcDayStart(new Date());
 
-  const [campaigns, deliveredTotals, returnedTotals] = await Promise.all([
+  const [campaigns, deliveredTotals, returnedTotals, pendingRequests] = await Promise.all([
     prisma.buyerCampaign.findMany({
+      where: { approvalStatus: { not: "PENDING_APPROVAL" } },
       orderBy: [{ active: "desc" }, { vertical: "asc" }, { priority: "asc" }],
       include: {
         buyer: { select: { id: true, name: true, status: true } },
@@ -37,6 +39,11 @@ export default async function AdminCampaignsPage() {
       where: { buyerStatus: "RETURN_APPROVED" },
       _count: { _all: true },
     }),
+    prisma.buyerCampaign.findMany({
+      where: { approvalStatus: "PENDING_APPROVAL" },
+      orderBy: { createdAt: "asc" },
+      include: { buyer: { select: { name: true } } },
+    }),
   ]);
 
   const deliveredBy = new Map(deliveredTotals.map((d) => [d.campaignId, d]));
@@ -52,7 +59,41 @@ export default async function AdminCampaignsPage() {
         subtitle="Every buyer campaign, with today's pacing and lifetime performance."
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5 xl:p-6">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 xl:p-6">
+        {pendingRequests.length > 0 && (
+          <Panel className="border-warning-border">
+            <PanelHeader
+              icon={<Inbox className="size-3.5" />}
+              title="Pending campaign requests"
+              subtitle="Self-serve drafts from buyers. Nothing here routes until approved."
+              action={<Badge tone="warning">{count(pendingRequests.length)}</Badge>}
+            />
+            <PanelBody dense>
+              <ul className="divide-y divide-[var(--border)]">
+                {pendingRequests.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
+                  >
+                    <div className="min-w-[12rem] flex-1">
+                      <div className="text-body font-medium text-ink">{c.name}</div>
+                      <div className="text-meta text-muted">{c.buyer.name}</div>
+                    </div>
+                    <div className="text-meta text-muted">{verticalLabel(c.vertical)}</div>
+                    <div className="font-mono text-meta text-ink tabular">
+                      {money(c.maxCpl)} CPL · {money(c.dailyBudget)}/day
+                    </div>
+                    <div className="min-w-0 flex-1 truncate font-mono text-micro text-faint">
+                      {c.deliveryWebhookUrl}
+                    </div>
+                    <CampaignRequestActions campaignId={c.id} />
+                  </li>
+                ))}
+              </ul>
+            </PanelBody>
+          </Panel>
+        )}
+
         <Panel>
           <PanelHeader
             icon={<Target className="size-3.5" />}

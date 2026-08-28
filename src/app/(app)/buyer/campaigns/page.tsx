@@ -3,6 +3,7 @@ import { Target } from "lucide-react";
 import { Topbar } from "@/components/shell/topbar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CampaignCard } from "./campaign-card";
+import { RequestCampaignButton } from "./request-campaign-button";
 import { requireBuyer } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db/prisma";
 import { utcDayStart } from "@/lib/pipeline/normalize";
@@ -46,6 +47,7 @@ export default async function BuyerCampaignsPage() {
         user={user}
         title="Campaigns"
         subtitle="Filters here are evaluated verbatim by the step 6 qualifier."
+        actions={campaigns.length > 0 ? <RequestCampaignButton /> : undefined}
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto p-5 xl:p-6">
@@ -53,7 +55,8 @@ export default async function BuyerCampaignsPage() {
           <EmptyState
             icon={<Target />}
             title="No campaigns yet"
-            description="Network operations provisions campaigns. Contact your account manager to add one."
+            description="Request a campaign and network operations will review it — nothing routes until it's approved."
+            action={<RequestCampaignButton variant="primary" />}
           />
         ) : (
           <div className="space-y-3">
@@ -75,6 +78,7 @@ export default async function BuyerCampaignsPage() {
                     acceptedZips: c.acceptedZips,
                     criteriaJson: c.criteriaJson,
                     active: c.active,
+                    approvalStatus: c.approvalStatus,
                     priority: c.priority,
                     deliveredToday: stat?.leadsDelivered ?? 0,
                     spendToday: Number(stat?.spendAmount ?? 0),

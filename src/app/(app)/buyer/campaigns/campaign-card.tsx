@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Vertical } from "@prisma/client";
+import type { CampaignApprovalStatus, Vertical } from "@prisma/client";
 import { Pause, Play, Save, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { money, percent } from "@/lib/format";
-import { verticalLabel } from "@/lib/domain/labels";
+import { CAMPAIGN_APPROVAL_STATUS, verticalLabel } from "@/lib/domain/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/card";
@@ -26,6 +26,7 @@ export interface CampaignView {
   acceptedZips: string[];
   criteriaJson: unknown;
   active: boolean;
+  approvalStatus: CampaignApprovalStatus;
   priority: number;
   deliveredToday: number;
   spendToday: number;
@@ -43,9 +44,11 @@ const ERRORS: Record<string, string> = {
   INVALID_CRITERIA_JSON:
     "Criteria must be valid JSON using only the supported keys.",
   NOT_FOUND: "That campaign is not on your account.",
+  MISSING_FIELDS: "Give the campaign a name.",
 };
 
-function errorMessage(code: string | undefined): string {
+/** Shared with campaign-draft-form.tsx — both post through the same parseCampaignForm(), so the same codes come back. */
+export function errorMessage(code: string | undefined): string {
   if (!code) return "That change could not be saved.";
   if (code.startsWith("INVALID_STATE:")) {
     return `"${code.split(":")[1]}" is not a valid USPS state code.`;
@@ -107,9 +110,18 @@ export function CampaignCard({ campaign }: { campaign: CampaignView }) {
         title={
           <span className="flex flex-wrap items-center gap-2">
             {campaign.name}
-            <Badge tone={campaign.active ? "success" : "neutral"} dot>
-              {campaign.active ? "Active" : "Paused"}
-            </Badge>
+            {campaign.approvalStatus === "APPROVED" ? (
+              <Badge tone={campaign.active ? "success" : "neutral"} dot>
+                {campaign.active ? "Active" : "Paused"}
+              </Badge>
+            ) : (
+              <Badge
+                tone={CAMPAIGN_APPROVAL_STATUS[campaign.approvalStatus].tone}
+                title={CAMPAIGN_APPROVAL_STATUS[campaign.approvalStatus].help}
+              >
+                {CAMPAIGN_APPROVAL_STATUS[campaign.approvalStatus].label}
+              </Badge>
+            )}
             <Badge tone="neutral">{verticalLabel(campaign.vertical)}</Badge>
             <Badge tone="neutral" title="Lower numbers are matched first.">
               priority {campaign.priority}
