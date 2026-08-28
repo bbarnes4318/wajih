@@ -1,9 +1,10 @@
+import { Suspense } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/shell/sidebar";
 import { MobileNavDrawer } from "@/components/shell/mobile-nav-drawer";
 import { ShellProvider } from "@/components/shell/shell-context";
+import { UnreadBadge } from "@/components/shell/unread-badge";
 import { requireUser } from "@/lib/auth/rbac";
-import { prisma } from "@/lib/db/prisma";
 
 /**
  * Authenticated shell. The role gate here is for navigation only — every
@@ -13,15 +14,20 @@ import { prisma } from "@/lib/db/prisma";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
-  const unreadCount = await prisma.notification.count({
-    where: { orgId: user.orgId, readAt: null },
-  });
-
   const sidebarProps = {
     role: user.role,
     orgName: user.orgName,
     orgStatus: user.orgStatus,
-    unreadCount,
+    // Isolated in its own Suspense boundary so the unread-notification count
+    // doesn't hold up the rest of the shell — nav, org identity — from
+    // painting. (The auth check above still gates first paint; see the
+    // known limitation noted in loading.tsx for why a page-level loading.tsx
+    // alone can't mask that.)
+    unreadBadge: (
+      <Suspense fallback={null}>
+        <UnreadBadge orgId={user.orgId} />
+      </Suspense>
+    ),
   };
 
   return (

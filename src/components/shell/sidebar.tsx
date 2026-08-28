@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as Icons from "lucide-react";
+import type { ReactNode } from "react";
 import type { UserRole } from "@prisma/client";
 import { NAV, PORTAL_LABEL, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,8 @@ export interface SidebarContentProps {
   role: UserRole;
   orgName: string;
   orgStatus: OrgStatus;
-  unreadCount: number;
+  /** A Suspense-wrapped `<UnreadBadge>` — isolated so the rest of the shell doesn't wait on it. */
+  unreadBadge?: ReactNode;
   /** Called after a nav link is activated — used by the mobile drawer to close itself. */
   onNavigate?: () => void;
 }
@@ -44,7 +46,7 @@ export function SidebarContent({
   role,
   orgName,
   orgStatus,
-  unreadCount,
+  unreadBadge,
   onNavigate,
 }: SidebarContentProps) {
   const pathname = usePathname();
@@ -130,9 +132,7 @@ export function SidebarContent({
             <Icons.Bell className="size-3.5 text-faint" />
             Notifications
           </span>
-          {unreadCount > 0 && (
-            <Badge tone="danger">{unreadCount > 99 ? "99+" : unreadCount}</Badge>
-          )}
+          {unreadBadge}
         </Link>
       </div>
     </nav>

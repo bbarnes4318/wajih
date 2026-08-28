@@ -141,7 +141,7 @@ export default async function BuyerBillingPage() {
                 <EmptyState title="No billable volume this month" />
               ) : (
                 <table className="w-full text-left">
-                  <thead className="border-b border-line bg-sunken">
+                  <thead className="border-b border-line bg-inset">
                     <tr>
                       {["Vertical", "Leads", "Spend", "Avg CPL"].map((h) => (
                         <th
@@ -192,7 +192,7 @@ export default async function BuyerBillingPage() {
                 <EmptyState title="No billable volume this month" />
               ) : (
                 <table className="w-full text-left">
-                  <thead className="border-b border-line bg-sunken">
+                  <thead className="border-b border-line bg-inset">
                     <tr>
                       {["Campaign", "Leads", "Spend", "Share"].map((h) => (
                         <th
@@ -248,7 +248,7 @@ export default async function BuyerBillingPage() {
             ) : (
               <div className="grid-scroll">
                 <table className="w-full text-left">
-                  <thead className="border-b border-line bg-sunken">
+                  <thead className="border-b border-line bg-inset">
                     <tr>
                       {["Date", "Campaign", "Delivered", "Returned", "Spend"].map(
                         (h) => (
