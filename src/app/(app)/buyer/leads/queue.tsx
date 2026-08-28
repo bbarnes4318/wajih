@@ -323,9 +323,9 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
                 </div>
               )}
 
-              <div className="flex items-start gap-2 lg:contents">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
                 {actionable && (
-                  <label className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center lg:min-h-0 lg:min-w-0 lg:self-start">
+                  <label className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center lg:min-h-0 lg:min-w-0">
                     <input
                       type="checkbox"
                       checked={isSelected}
