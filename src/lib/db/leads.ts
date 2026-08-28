@@ -257,6 +257,23 @@ export async function buyerSegmentCounts(
   >;
 }
 
+/** The buyer's saved filter-query-string snapshots, each with a live count against the current data. */
+export async function buyerSavedViewsWithCounts(user: SessionUser) {
+  const views = await prisma.savedView.findMany({
+    where: { orgId: user.orgId, userId: user.id },
+    orderBy: [{ pinned: "desc" }, { createdAt: "asc" }],
+  });
+
+  const counts = await Promise.all(
+    views.map((v) => {
+      const params = Object.fromEntries(new URLSearchParams(v.queryString));
+      return prisma.lead.count({ where: buildWhere(user, parseLeadFilters(params)) });
+    }),
+  );
+
+  return views.map((v, i) => ({ ...v, count: counts[i] }));
+}
+
 /** Full detail for the drill-down drawer, scoped to the caller's tenancy. */
 export async function getLeadDetail(user: SessionUser, leadId: string) {
   const lead = await prisma.lead.findFirst({

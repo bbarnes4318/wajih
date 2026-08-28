@@ -9,9 +9,11 @@ import { Pagination } from "@/components/domain/pagination";
 import { ExportButton } from "@/components/domain/export-button";
 import { BuyerLeadQueue } from "./queue";
 import { SegmentTabs } from "./segment-tabs";
+import { SavedViewChips } from "./saved-view-chips";
 import { requireBuyer } from "@/lib/auth/rbac";
 import {
   buyerClosingSoonCount,
+  buyerSavedViewsWithCounts,
   buyerSegmentCounts,
   leadFilterOptions,
   parseLeadFilters,
@@ -43,7 +45,7 @@ export default async function BuyerLeadsPage(props: PageProps<"/buyer/leads">) {
   const sort: "expiryAsc" | "deliveredDesc" = segment === "history" ? "deliveredDesc" : "expiryAsc";
   const filters = { ...rawFilters, segment, sort };
 
-  const [result, counts, options, openWindows, closingSoonCount] = await Promise.all([
+  const [result, counts, options, openWindows, closingSoonCount, savedViews] = await Promise.all([
     queryLeads(user, filters),
     stageCounts(user, filters),
     leadFilterOptions(user),
@@ -56,6 +58,7 @@ export default async function BuyerLeadsPage(props: PageProps<"/buyer/leads">) {
       },
     }),
     buyerClosingSoonCount(user, 60),
+    buyerSavedViewsWithCounts(user),
   ]);
 
   return (
@@ -97,6 +100,8 @@ export default async function BuyerLeadsPage(props: PageProps<"/buyer/leads">) {
         <div className="border-b border-line px-4 py-3">
           <SegmentTabs value={segment} counts={segmentCounts} />
         </div>
+
+        <SavedViewChips views={savedViews} />
 
         <LeadFilterBar
           options={options}

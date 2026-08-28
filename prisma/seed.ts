@@ -316,9 +316,34 @@ async function seedBuyers() {
       });
       campaignIdByKey.set(c.key, campaign.id);
     }
+
+    // Seeded so the saved-views feature (B7) is discovered rather than
+    // explained — a buyer opens the queue and the chips are already there.
+    const buyerUser = await prisma.user.findFirstOrThrow({
+      where: { orgId: org.id },
+      select: { id: true },
+    });
+    await prisma.savedView.createMany({
+      data: [
+        {
+          orgId: org.id,
+          userId: buyerUser.id,
+          name: "Closing today",
+          queryString: "segment=closingToday",
+          pinned: true,
+        },
+        {
+          orgId: org.id,
+          userId: buyerUser.id,
+          name: "Disputed",
+          queryString: "stage=DISPUTED",
+          pinned: true,
+        },
+      ],
+    });
   }
 
-  log(`${BUYERS.length} buyers with ${campaignIdByKey.size} campaigns`);
+  log(`${BUYERS.length} buyers with ${campaignIdByKey.size} campaigns, 2 default saved views each`);
   return campaignIdByKey;
 }
 
