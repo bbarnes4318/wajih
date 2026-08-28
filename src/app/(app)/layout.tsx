@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/shell/sidebar";
 import { MobileNavDrawer } from "@/components/shell/mobile-nav-drawer";
 import { ShellProvider } from "@/components/shell/shell-context";
 import { UnreadBadge } from "@/components/shell/unread-badge";
+import { CommandPalette } from "@/components/shell/command-palette";
 import { requireUser } from "@/lib/auth/rbac";
 
 /**
@@ -32,13 +34,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <ShellProvider>
-        <div className="flex h-dvh overflow-hidden bg-app">
-          <Sidebar {...sidebarProps} />
-          <MobileNavDrawer {...sidebarProps} />
-          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-        </div>
-      </ShellProvider>
+      <ToastProvider>
+        <ShellProvider>
+          <div className="flex h-dvh overflow-hidden bg-app">
+            <Sidebar {...sidebarProps} />
+            <MobileNavDrawer {...sidebarProps} />
+            <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+          </div>
+          {/* Cross-portal nav palette — scoped to BUYER for this redesign pass. */}
+          {user.role === "BUYER" && <CommandPalette role={user.role} />}
+        </ShellProvider>
+      </ToastProvider>
     </TooltipProvider>
   );
 }

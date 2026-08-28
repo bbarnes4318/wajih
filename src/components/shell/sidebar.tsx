@@ -13,7 +13,8 @@ import type { OrgStatus } from "@prisma/client";
 
 type IconName = keyof typeof Icons;
 
-function NavIcon({ name, className }: { name: string; className?: string }) {
+/** Resolves a Lucide icon by name string. Exported for the command palette, which needs the same lookup for nav entries. */
+export function NavIcon({ name, className }: { name: string; className?: string }) {
   const Cmp = Icons[name as IconName] as React.ComponentType<{
     className?: string;
   }>;

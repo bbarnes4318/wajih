@@ -11,6 +11,9 @@ import { leadScopeFor } from "@/lib/auth/rbac";
  * whole network in memory.
  */
 
+/** Buyer expiry-triage lens — see `buildWhere`'s `segment` handling below. */
+export type LeadSegment = "closing2h" | "closingToday" | "allPending" | "history";
+
 export interface LeadFilters {
   sourceId?: string;
   publisherOrgId?: string;
@@ -24,6 +27,10 @@ export interface LeadFilters {
   to?: string;
   /** Only leads whose dispute window is still open. */
   disputable?: boolean;
+  /** Buyer delivery-queue triage lens. Admin/publisher callers never pass this. */
+  segment?: LeadSegment;
+  /** `expiryAsc` sorts by soonest-closing window first; default is delivery-time order. */
+  sort?: "expiryAsc" | "deliveredDesc";
   page?: number;
   pageSize?: number;
 }
@@ -39,6 +46,7 @@ export function parseLeadFilters(
   };
 
   const page = Number(one("page") ?? "1");
+  const segment = one("segment");
 
   return {
     sourceId: one("source") || undefined,
@@ -51,6 +59,11 @@ export function parseLeadFilters(
     from: one("from") || undefined,
     to: one("to") || undefined,
     disputable: one("disputable") === "1" || undefined,
+    segment: (["closing2h", "closingToday", "allPending", "history"] as const).includes(
+      segment as LeadSegment,
+    )
+      ? (segment as LeadSegment)
+      : undefined,
     page: Number.isFinite(page) && page > 0 ? Math.floor(page) : 1,
     pageSize: PAGE_SIZE,
   };
@@ -79,6 +92,24 @@ function buildWhere(
     where.buyerStatus = "PENDING";
     where.disputeWindowExpiresAt = { gt: new Date() };
     where.deliveredAt = { not: null };
+  }
+
+  if (f.segment) {
+    const now = new Date();
+    if (f.segment === "history") {
+      where.buyerStatus = { not: "PENDING" };
+    } else {
+      where.buyerStatus = "PENDING";
+      where.deliveredAt = { not: null };
+      if (f.segment === "closing2h") {
+        where.disputeWindowExpiresAt = { gt: now, lte: new Date(now.getTime() + 2 * 3_600_000) };
+      } else if (f.segment === "closingToday") {
+        const endOfDay = new Date(now);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        where.disputeWindowExpiresAt = { gt: now, lte: endOfDay };
+      }
+      // "allPending" applies no further window constraint.
+    }
   }
 
   if (f.from || f.to) {
@@ -116,10 +147,13 @@ export async function queryLeads(user: SessionUser, f: LeadFilters) {
   const page = f.page ?? 1;
   const pageSize = f.pageSize ?? PAGE_SIZE;
 
+  const orderBy: Prisma.LeadOrderByWithRelationInput =
+    f.sort === "expiryAsc" ? { disputeWindowExpiresAt: "asc" } : { createdAt: "desc" };
+
   const [rows, total] = await Promise.all([
     prisma.lead.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
@@ -178,6 +212,43 @@ export async function stageCounts(user: SessionUser, f: LeadFilters) {
     _count: { _all: true },
   });
   return new Map(grouped.map((g) => [g.pipelineStage, g._count._all]));
+}
+
+/** Unfiltered — the "closing within the hour" banner interrupts regardless of the buyer's current view. */
+export async function buyerClosingSoonCount(user: SessionUser, minutes: number) {
+  const now = new Date();
+  return prisma.lead.count({
+    where: {
+      ...leadScopeFor(user),
+      buyerStatus: "PENDING",
+      deliveredAt: { not: null },
+      disputeWindowExpiresAt: { gt: now, lte: new Date(now.getTime() + minutes * 60_000) },
+    },
+  });
+}
+
+/**
+ * Counts for the buyer's expiry-triage segmented control, evaluated against
+ * every filter *except* `segment` itself, so the counts describe "given your
+ * other filters, how many fall in each triage lens" rather than double-
+ * applying the currently-selected segment.
+ */
+export async function buyerSegmentCounts(
+  user: SessionUser,
+  f: LeadFilters,
+): Promise<Record<LeadSegment, number>> {
+  const segments: LeadSegment[] = ["closing2h", "closingToday", "allPending", "history"];
+  const counts = await Promise.all(
+    segments.map((segment) =>
+      prisma.lead.count({
+        where: buildWhere(user, { ...f, segment, page: 1 }),
+      }),
+    ),
+  );
+  return Object.fromEntries(segments.map((s, i) => [s, counts[i]])) as Record<
+    LeadSegment,
+    number
+  >;
 }
 
 /** Full detail for the drill-down drawer, scoped to the caller's tenancy. */
