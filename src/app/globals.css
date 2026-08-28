@@ -245,6 +245,22 @@
 }
 
 /* ==========================================================================
+   Density — comfortable (default) vs compact, toggled from the user menu and
+   persisted independently of theme. Compact targets ~40% more rows in the
+   same viewport height via row padding alone, never type size.
+   ========================================================================== */
+
+:root {
+  --density-row-py: 0.75rem;
+  --density-row-gap: 0.5rem;
+}
+
+[data-density="compact"] {
+  --density-row-py: 0.4375rem;
+  --density-row-gap: 0.25rem;
+}
+
+/* ==========================================================================
    Base
    ========================================================================== */
 

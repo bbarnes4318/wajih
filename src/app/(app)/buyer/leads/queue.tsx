@@ -311,7 +311,7 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
               tabIndex={isFocused ? 0 : -1}
               onFocus={() => setFocusedIndex(index)}
               className={cn(
-                "relative flex flex-col gap-2 p-4 transition-colors hover:bg-hover focus:outline-none lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2 lg:px-4 lg:py-3",
+                "relative flex flex-col gap-2 px-4 py-[var(--density-row-py)] transition-colors hover:bg-hover focus:outline-none lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2",
                 isFocused && "bg-hover ring-1 ring-accent ring-inset",
                 isSelected && "bg-accent-soft/40",
               )}

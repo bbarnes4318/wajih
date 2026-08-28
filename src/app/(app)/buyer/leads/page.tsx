@@ -6,6 +6,7 @@ import { Panel, PanelBody, PanelHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LeadFilterBar } from "@/components/domain/lead-filter-bar";
 import { Pagination } from "@/components/domain/pagination";
+import { ExportButton } from "@/components/domain/export-button";
 import { BuyerLeadQueue } from "./queue";
 import { SegmentTabs } from "./segment-tabs";
 import { requireBuyer } from "@/lib/auth/rbac";
@@ -64,12 +65,15 @@ export default async function BuyerLeadsPage(props: PageProps<"/buyer/leads">) {
         title="Delivery Queue"
         subtitle="Leads delivered to your campaigns, with their return windows."
         actions={
-          openWindows > 0 ? (
-            <Badge tone="warning" dot>
-              <Timer className="size-3" />
-              {count(openWindows)} inside return window
-            </Badge>
-          ) : undefined
+          <>
+            {openWindows > 0 && (
+              <Badge tone="warning" dot>
+                <Timer className="size-3" />
+                {count(openWindows)} inside return window
+              </Badge>
+            )}
+            <ExportButton />
+          </>
         }
       />
 

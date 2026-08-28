@@ -42,16 +42,31 @@ const THEME_BOOTSTRAP = `
 })();
 `;
 
+/** Same bootstrap shape as theme, independent preference and storage key. */
+const DENSITY_BOOTSTRAP = `
+(function () {
+  try {
+    var stored = localStorage.getItem("leados-density");
+    var density = stored === "compact" ? "compact" : "comfortable";
+    document.documentElement.setAttribute("data-density", density);
+  } catch (e) {
+    document.documentElement.setAttribute("data-density", "comfortable");
+  }
+})();
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       data-theme="dark"
+      data-density="comfortable"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script dangerouslySetInnerHTML={{ __html: DENSITY_BOOTSTRAP }} />
       </head>
       <body className="min-h-full">{children}</body>
     </html>

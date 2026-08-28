@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { parseLeadFilters, queryLeads } from "@/lib/db/leads";
+import { getSession, type SessionUser } from "@/lib/auth/session";
+import { parseLeadFilters, queryLeads, type LeadFilters } from "@/lib/db/leads";
 import { PIPELINE_STAGE, REJECTION_REASON } from "@/lib/domain/labels";
 
 /**
@@ -63,6 +63,20 @@ function csvRow(cells: unknown[]): string {
   return `${cells.map(csvCell).join(",")}\r\n`;
 }
 
+/** Encodes the caller's role and active filters into the download name. */
+function buildFilename(user: SessionUser, base: LeadFilters): string {
+  const parts = ["leados-leads", user.role.toLowerCase()];
+  if (base.segment) parts.push(base.segment);
+  if (base.vertical) parts.push(base.vertical.toLowerCase());
+  if (base.stage) parts.push(base.stage.toLowerCase());
+  parts.push(
+    base.from || base.to
+      ? `${base.from ?? "any"}_to_${base.to ?? "any"}`
+      : new Date().toISOString().slice(0, 10),
+  );
+  return `${parts.join("-").replace(/[^a-z0-9._-]/gi, "_")}.csv`;
+}
+
 export async function GET(req: NextRequest) {
   const user = await getSession();
   if (!user) {
@@ -89,9 +103,13 @@ export async function GET(req: NextRequest) {
       });
 
       for (const l of result.rows) {
-        // A publisher must not see buyer economics, and vice versa.
+        // A publisher must not see buyer economics or identity, and a buyer
+        // must not see publisher economics or identity — the same rule
+        // getLeadDetail already applies to the drill-down drawer.
         const buyerCost = user.role === "PUBLISHER" ? null : l.buyerCostAmount;
         const payout = user.role === "BUYER" ? null : l.publisherPayoutAmount;
+        const publisherName = user.role === "BUYER" ? null : l.publisher.name;
+        const buyerName = user.role === "PUBLISHER" ? null : (l.buyer?.name ?? null);
 
         controller.enqueue(
           encoder.encode(
@@ -100,7 +118,7 @@ export async function GET(req: NextRequest) {
               l.receivedAtUtc.toISOString(),
               l.id,
               l.vertical,
-              l.publisher.name,
+              publisherName,
               l.pipelineStage,
               PIPELINE_STAGE[l.pipelineStage].label,
               l.rejectionStep,
@@ -121,7 +139,7 @@ export async function GET(req: NextRequest) {
               l.jornayaLeadId,
               l.ingressChannel,
               l.ingressIp,
-              l.buyer?.name ?? null,
+              buyerName,
               l.campaign?.name ?? null,
               l.buyerStatus,
               l.disputeReasonCode,
@@ -158,12 +176,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "");
-
   return new Response(stream, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="leados-leads-${stamp}.csv"`,
+      "content-disposition": `attachment; filename="${buildFilename(user, base)}"`,
       "cache-control": "no-store",
     },
   });

@@ -11,7 +11,7 @@ import {
   stageCounts,
 } from "@/lib/db/leads";
 import { toLeadTableRow } from "@/lib/db/lead-view";
-import { ExportButton } from "./export-button";
+import { ExportButton } from "@/components/domain/export-button";
 
 export const metadata: Metadata = { title: "Lead Stream" };
 

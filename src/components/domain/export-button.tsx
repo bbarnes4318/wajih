@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Exports the *current filter set*, not the current page — an operator asking
- * for "these leads" means the whole slice they filtered to.
+ * for "these leads" means the whole slice they filtered to. Role-generic:
+ * `/api/leads/export` scopes and redacts by the caller's own role.
  */
 export function ExportButton() {
   const params = useSearchParams();
