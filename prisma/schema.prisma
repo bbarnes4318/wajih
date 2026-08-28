@@ -203,6 +203,27 @@ enum DeliveryStatus {
   EXHAUSTED
 }
 
+/// Buyer-private sales-pipeline outcome. Never fed into auto-suspension —
+/// a buyer's sales performance is not a supply-quality signal.
+enum LeadOutcome {
+  NOT_WORKED
+  NO_CONTACT
+  CONTACTED
+  APPOINTMENT_SET
+  QUOTED
+  SOLD
+  CLOSED_LOST
+}
+
+/// Distinct from `BuyerCampaign.active` — a buyer can pause an approved
+/// campaign, which shouldn't read as "still pending review".
+enum CampaignApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
 // ============================================================================
 //  ENUMS — VETTING
 // ============================================================================
@@ -271,17 +292,23 @@ enum NotificationSeverity {
 // ============================================================================
 
 model Organization {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String
-  type        OrgType
-  einTaxId    String?   @map("ein_tax_id")
-  website     String?
-  status      OrgStatus @default(PENDING_VETTING)
-  contactName String?   @map("contact_name")
-  contactEmail String?  @map("contact_email")
-  contactPhone String?  @map("contact_phone")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  type         OrgType
+  einTaxId     String?   @map("ein_tax_id")
+  website      String?
+  status       OrgStatus @default(PENDING_VETTING)
+  contactName  String?   @map("contact_name")
+  contactEmail String?   @map("contact_email")
+  contactPhone String?   @map("contact_phone")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  /// First-run buyer checklist — step keys completed so far, e.g.
+  /// ["campaign_criteria", "webhook_verified"]. Auto-hides at 100% or
+  /// on explicit dismissal; irrelevant once either happens.
+  onboardingSteps       String[]  @default([]) @map("onboarding_steps")
+  onboardingDismissedAt DateTime? @map("onboarding_dismissed_at")
 
   users            User[]
   vettingProfile   PublisherVettingProfile?
@@ -293,6 +320,7 @@ model Organization {
   leadsAsBuyer     Lead[]                   @relation("BuyerLeads")
   csvBatches       CsvBatch[]
   notifications    Notification[]
+  savedViews       SavedView[]
 
   @@index([type, status])
   @@map("organizations")
@@ -308,8 +336,9 @@ model User {
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  sessions Session[]
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions   Session[]
+  savedViews SavedView[]
 
   @@index([orgId])
   @@map("users")
@@ -356,14 +385,14 @@ model PublisherVettingProfile {
 }
 
 model VettingCheck {
-  id               String             @id @default(uuid()) @db.Uuid
-  profileId        String             @map("profile_id") @db.Uuid
-  key              VettingCheckKey
-  status           VettingCheckStatus @default(NOT_STARTED)
-  notes            String?
-  evidenceUrl      String?            @map("evidence_url")
-  checkedAt        DateTime?          @map("checked_at")
-  checkedByUserId  String?            @map("checked_by_user_id") @db.Uuid
+  id              String             @id @default(uuid()) @db.Uuid
+  profileId       String             @map("profile_id") @db.Uuid
+  key             VettingCheckKey
+  status          VettingCheckStatus @default(NOT_STARTED)
+  notes           String?
+  evidenceUrl     String?            @map("evidence_url")
+  checkedAt       DateTime?          @map("checked_at")
+  checkedByUserId String?            @map("checked_by_user_id") @db.Uuid
 
   profile PublisherVettingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
@@ -379,16 +408,16 @@ model VettingCheck {
 /// immutable public identifier that travels with every lead through every
 /// table, webhook header, log line and CSV export.
 model LeadSource {
-  id             String    @id @default(uuid()) @db.Uuid
-  sourceId       String    @unique @map("source_id")
-  publisherOrgId String    @map("publisher_org_id") @db.Uuid
+  id             String        @id @default(uuid()) @db.Uuid
+  sourceId       String        @unique @map("source_id")
+  publisherOrgId String        @map("publisher_org_id") @db.Uuid
   label          String
   vertical       Vertical
   trafficSource  TrafficSource @map("traffic_source")
-  landingPageUrl String?   @map("landing_page_url")
-  active         Boolean   @default(true)
-  apiKeyHash     String?   @map("api_key_hash")
-  createdAt      DateTime  @default(now()) @map("created_at")
+  landingPageUrl String?       @map("landing_page_url")
+  active         Boolean       @default(true)
+  apiKeyHash     String?       @map("api_key_hash")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
   publisher Organization @relation(fields: [publisherOrgId], references: [id], onDelete: Cascade)
   leads     Lead[]
@@ -416,33 +445,38 @@ model PublisherRate {
 // ============================================================================
 
 model BuyerCampaign {
-  id                String   @id @default(uuid()) @db.Uuid
-  name              String
-  buyerOrgId        String   @map("buyer_org_id") @db.Uuid
-  vertical          Vertical
-  maxCpl            Decimal  @map("max_cpl") @db.Decimal(12, 4)
-  dailyBudget       Decimal  @map("daily_budget") @db.Decimal(12, 2)
-  dailyCapLeads     Int?     @map("daily_cap_leads")
-  acceptedZips      String[] @map("accepted_zips")
-  acceptedStates    String[] @map("accepted_states")
+  id                 String                 @id @default(uuid()) @db.Uuid
+  name               String
+  buyerOrgId         String                 @map("buyer_org_id") @db.Uuid
+  vertical           Vertical
+  maxCpl             Decimal                @map("max_cpl") @db.Decimal(12, 4)
+  dailyBudget        Decimal                @map("daily_budget") @db.Decimal(12, 2)
+  dailyCapLeads      Int?                   @map("daily_cap_leads")
+  acceptedZips       String[]               @map("accepted_zips")
+  acceptedStates     String[]               @map("accepted_states")
   /// Vertical-specific filter tree, e.g. { minAge: 18, maxAge: 64,
   /// requireHomeowner: true, excludeCreditBands: ["POOR"] }
-  criteriaJson      Json     @default("{}") @map("criteria_json")
-  deliveryWebhookUrl String  @map("delivery_webhook_url")
-  webhookAuthHeader String?  @map("webhook_auth_header")
-  returnWindowHours Int      @default(72) @map("return_window_hours")
-  priority          Int      @default(100)
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  criteriaJson       Json                   @default("{}") @map("criteria_json")
+  deliveryWebhookUrl String                 @map("delivery_webhook_url")
+  webhookAuthHeader  String?                @map("webhook_auth_header")
+  returnWindowHours  Int                    @default(72) @map("return_window_hours")
+  priority           Int                    @default(100)
+  active             Boolean                @default(true)
+  /// Existing rows default to APPROVED — this only gates buyer-submitted
+  /// drafts (B10), it doesn't retroactively re-review anything admin/seed
+  /// already created directly.
+  approvalStatus     CampaignApprovalStatus @default(APPROVED) @map("approval_status")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
 
-  buyer      Organization         @relation(fields: [buyerOrgId], references: [id], onDelete: Cascade)
+  buyer      Organization        @relation(fields: [buyerOrgId], references: [id], onDelete: Cascade)
   leads      Lead[]
   dailyStats CampaignDailyStat[]
   deliveries DeliveryAttempt[]
 
   @@index([vertical, active])
   @@index([buyerOrgId])
+  @@index([approvalStatus])
   @@map("buyer_campaigns")
 }
 
@@ -470,12 +504,12 @@ model Lead {
   id String @id @db.Uuid
 
   // --- Immutable intake identity (Rule 2: carries through everything) ---
-  sourceId        String         @map("source_id")
-  leadSourceRefId String?        @map("lead_source_ref_id") @db.Uuid
-  receivedAtUtc   DateTime       @map("received_at_utc")
-  ingressIp       String?        @map("ingress_ip")
-  ingressUserAgent String?       @map("ingress_user_agent")
-  ingressChannel  IngressChannel @default(API) @map("ingress_channel")
+  sourceId         String         @map("source_id")
+  leadSourceRefId  String?        @map("lead_source_ref_id") @db.Uuid
+  receivedAtUtc    DateTime       @map("received_at_utc")
+  ingressIp        String?        @map("ingress_ip")
+  ingressUserAgent String?        @map("ingress_user_agent")
+  ingressChannel   IngressChannel @default(API) @map("ingress_channel")
 
   // --- Tenancy ---
   publisherOrgId String  @map("publisher_org_id") @db.Uuid
@@ -498,12 +532,12 @@ model Lead {
   contactZip       String? @map("contact_zip")
 
   // --- Compliance artifacts ---
-  trustedformCertUrl   String? @map("trustedform_cert_url")
-  jornayaLeadId        String? @map("jornaya_lead_id")
-  consentTextCaptured  String? @map("consent_text_captured")
+  trustedformCertUrl   String?  @map("trustedform_cert_url")
+  jornayaLeadId        String?  @map("jornaya_lead_id")
+  consentTextCaptured  String?  @map("consent_text_captured")
   dncScrubPassed       Boolean? @map("dnc_scrub_passed")
   litigatorScrubPassed Boolean? @map("litigator_scrub_passed")
-  dedupHash            String  @map("dedup_hash")
+  dedupHash            String   @map("dedup_hash")
 
   // --- Pipeline state ---
   pipelineStage       PipelineStage        @default(INTAKE) @map("pipeline_stage")
@@ -526,6 +560,13 @@ model Lead {
   settlementStatus      SettlementStatus @default(UNSETTLED) @map("settlement_status")
   settledAt             DateTime?        @map("settled_at")
 
+  // --- Buyer-private sales outcome (B9). Buyer-writable only — never read
+  // by auto-suspension or shown in any publisher-facing view; a buyer's
+  // sales performance is not a supply-quality signal. ---
+  outcome            LeadOutcome? @map("outcome")
+  outcomeUpdatedAt   DateTime?    @map("outcome_updated_at")
+  outcomeValueAmount Decimal?     @map("outcome_value_amount") @db.Decimal(12, 2)
+
   createdAt   DateTime  @default(now()) @map("created_at")
   deliveredAt DateTime? @map("delivered_at")
 
@@ -545,6 +586,7 @@ model Lead {
   @@index([contactPhone])
   @@index([campaignId, deliveredAt])
   @@index([disputeWindowExpiresAt])
+  @@index([buyerOrgId, outcome])
   @@map("leads")
 }
 
@@ -675,6 +717,24 @@ model Notification {
 
   @@index([orgId, readAt])
   @@map("notifications")
+}
+
+/// A named, pinnable snapshot of the delivery queue's filter query string.
+/// Personal to the user who saved it, not shared across the org.
+model SavedView {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  name        String
+  queryString String   @map("query_string")
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, userId])
+  @@map("saved_views")
 }
 
 model AdminAuditLog {
