@@ -1,0 +1,692 @@
+// ============================================================================
+//  LEAD DISTRIBUTION & COMPLIANCE OS — DATA MODEL
+//  PostgreSQL. Strict FKs, JSONB for vertical-specific payloads, append-only
+//  audit tables. Every rejection / dispute reason is an enum — never free text.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 moved the connection URL out of the schema. Migration/introspection
+// read it from `prisma.config.ts`; the runtime client gets a driver adapter.
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+//  ENUMS — IDENTITY & TENANCY
+// ============================================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  PUBLISHER
+  BUYER
+}
+
+enum OrgType {
+  INTERNAL
+  PUBLISHER
+  BUYER
+}
+
+enum OrgStatus {
+  PENDING_VETTING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+// ============================================================================
+//  ENUMS — TAXONOMY
+// ============================================================================
+
+enum Vertical {
+  AUTO_INSURANCE
+  HOME_INSURANCE
+  HEALTH_INSURANCE
+  LIFE_INSURANCE
+  MEDICARE
+  SOLAR
+  HOME_IMPROVEMENT
+  MORTGAGE
+  PERSONAL_LOAN
+  DEBT_RELIEF
+  LEGAL_MASS_TORT
+  EDUCATION
+}
+
+enum TrafficSource {
+  SEO
+  PAID_SEARCH
+  PAID_SOCIAL
+  DISPLAY
+  NATIVE
+  EMAIL
+  SMS
+  PUSH
+  CALL_CENTER
+  CO_REGISTRATION
+  AGGREGATOR
+  INCENTIVIZED
+}
+
+enum IngressChannel {
+  API
+  SINGLE_FORM
+  CSV_BATCH
+}
+
+// ============================================================================
+//  ENUMS — PIPELINE STATE MACHINE
+// ============================================================================
+
+/// Ordered lifecycle. A lead only ever moves forward, except DISPUTED which
+/// may resolve back to ACCEPTED (RETURN_DENIED) or terminate at REJECTED.
+enum PipelineStage {
+  INTAKE
+  VALIDATED
+  SCRUBBED
+  CONSENT_VERIFIED
+  QUALIFIED
+  ROUTED
+  DELIVERED
+  DISPUTED
+  ACCEPTED
+  SETTLED
+  REJECTED
+  HOLD_QUEUE
+}
+
+/// Which waterfall step halted execution. Steps 1-6 are the compliance gate;
+/// step 7 is recorded when the lead was compliant but no buyer slot existed.
+enum RejectionStep {
+  STEP_1_INTAKE
+  STEP_2_FIELD_VALIDATION
+  STEP_3_DEDUP
+  STEP_4_DNC_LITIGATOR
+  STEP_5_CONSENT
+  STEP_6_VERTICAL_QUALIFIER
+  STEP_7_ROUTING
+}
+
+/// Strictly typed rejection taxonomy. No free-text error strings are ever
+/// surfaced to publishers — only these codes.
+enum RejectionReasonCode {
+  // --- Step 1: Intake ---
+  MISSING_SOURCE_ID
+  UNKNOWN_SOURCE_ID
+  SOURCE_INACTIVE
+  PUBLISHER_NOT_VETTED
+  PUBLISHER_SUSPENDED
+  PUBLISHER_TERMINATED
+
+  // --- Step 2: Field validation ---
+  MISSING_REQUIRED_FIELD
+  INVALID_PHONE_FORMAT
+  NON_US_PHONE
+  INVALID_EMAIL_FORMAT
+  INVALID_STATE_CODE
+  INVALID_ZIP_CODE
+  INVALID_DATE_OF_BIRTH
+  VERTICAL_SCHEMA_MISMATCH
+
+  // --- Step 3: Dedup ---
+  DUPLICATE_INTRA_PUBLISHER
+  DUPLICATE_CROSS_PUBLISHER
+
+  // --- Step 4: DNC / TCPA litigator ---
+  DNC_FEDERAL_MATCH
+  DNC_STATE_MATCH
+  DNC_INTERNAL_MATCH
+  TCPA_LITIGATOR_MATCH
+  SCRUB_PROVIDER_ERROR
+
+  // --- Step 5: Consent ---
+  CONSENT_CERT_MISSING
+  CONSENT_CERT_MALFORMED
+  CONSENT_CERT_EXPIRED
+  CONSENT_TEXT_MISSING
+
+  // --- Step 6: Vertical qualifier ---
+  NO_ACTIVE_CAMPAIGN_FOR_VERTICAL
+  OUT_OF_GEOGRAPHY
+  AGE_OUT_OF_RANGE
+  CRITERIA_MISMATCH
+
+  // --- Step 7: Routing ---
+  ALL_CAMPAIGNS_CAPPED
+  DAILY_BUDGET_EXHAUSTED
+  CPL_FLOOR_NOT_MET
+}
+
+enum AuditStepStatus {
+  PASS
+  FAIL
+  HOLD
+  SKIP
+}
+
+// ============================================================================
+//  ENUMS — COMMERCIAL LIFECYCLE
+// ============================================================================
+
+enum BuyerLeadStatus {
+  PENDING
+  ACCEPTED
+  DISPUTED
+  RETURN_APPROVED
+  RETURN_DENIED
+}
+
+enum DisputeReasonCode {
+  INVALID_DISCONNECT
+  TCPA_MISMATCH
+  OUT_OF_GEOGRAPHY
+  DUPLICATE_WITHIN_WINDOW
+  WRONG_PERSON
+  BOGUS_CONTACT_INFO
+}
+
+enum SettlementStatus {
+  UNSETTLED
+  SETTLED_PAYABLE
+  SETTLED_VOID
+  CLAWED_BACK
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_FLIGHT
+  SUCCESS
+  FAILED
+  EXHAUSTED
+}
+
+// ============================================================================
+//  ENUMS — VETTING
+// ============================================================================
+
+/// The 9-point publisher fraud-screening checklist.
+enum VettingCheckKey {
+  EIN_TAX_ID_VERIFIED
+  BUSINESS_ENTITY_IN_GOOD_STANDING
+  LANDING_PAGE_LIVE_CHECK
+  VERBATIM_DISCLOSURE_MATCH
+  CONSENT_CAPTURE_SAMPLE_REVIEWED
+  TRAFFIC_SOURCE_DISCLOSURE_COMPLETE
+  INDUSTRY_REFERENCES_CHECKED
+  SIGNED_INDEMNITY_AGREEMENT
+  TEST_BATCH_PASSED
+}
+
+enum VettingCheckStatus {
+  NOT_STARTED
+  IN_REVIEW
+  PASSED
+  FAILED
+  WAIVED
+}
+
+// ============================================================================
+//  ENUMS — CSV BATCH INTAKE
+// ============================================================================
+
+enum BatchStatus {
+  UPLOADED
+  VALIDATING
+  VALIDATION_FAILED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/// Pre-flight fraud heuristics run across a whole CSV before any row is
+/// allowed into the pipeline.
+enum BatchIntegrityFlag {
+  MISSING_CERT_COLUMN
+  INVALID_HEADER_SCHEMA
+  SEQUENTIAL_PHONE_PATTERN
+  DUPLICATE_IP_CLUSTER
+  UNIFORM_TIMESTAMPS
+  HIGH_INTRA_BATCH_DUPLICATES
+  IMPOSSIBLE_SUBMIT_VELOCITY
+}
+
+enum SuppressionListType {
+  INTERNAL_DNC
+  FEDERAL_DNC
+  STATE_DNC
+  TCPA_LITIGATOR
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ============================================================================
+//  IDENTITY & TENANCY
+// ============================================================================
+
+model Organization {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  type        OrgType
+  einTaxId    String?   @map("ein_tax_id")
+  website     String?
+  status      OrgStatus @default(PENDING_VETTING)
+  contactName String?   @map("contact_name")
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users            User[]
+  vettingProfile   PublisherVettingProfile?
+  sources          LeadSource[]
+  campaigns        BuyerCampaign[]
+  publisherRates   PublisherRate[]
+  metrics          PublisherMetrics?
+  leadsAsPublisher Lead[]                   @relation("PublisherLeads")
+  leadsAsBuyer     Lead[]                   @relation("BuyerLeads")
+  csvBatches       CsvBatch[]
+  notifications    Notification[]
+
+  @@index([type, status])
+  @@map("organizations")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         UserRole
+  orgId        String    @map("org_id") @db.Uuid
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@index([orgId])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ============================================================================
+//  PUBLISHER VETTING
+// ============================================================================
+
+model PublisherVettingProfile {
+  id                String          @id @default(uuid()) @db.Uuid
+  orgId             String          @unique @map("org_id") @db.Uuid
+  /// [{ name, company, email, phone, relationship, verified }]
+  references        Json            @default("[]")
+  trafficSources    TrafficSource[] @map("traffic_sources")
+  landingPageUrls   String[]        @map("landing_page_urls")
+  consentSampleUrl  String?         @map("consent_sample_url")
+  disclosureText    String?         @map("disclosure_text")
+  agreementSignedAt DateTime?       @map("agreement_signed_at")
+  agreementPdfUrl   String?         @map("agreement_pdf_url")
+  testBatchPassed   Boolean         @default(false) @map("test_batch_passed")
+  auditNotes        String?         @map("audit_notes")
+  submittedAt       DateTime?       @map("submitted_at")
+  approvedAt        DateTime?       @map("approved_at")
+  approvedByUserId  String?         @map("approved_by_user_id") @db.Uuid
+
+  org    Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  checks VettingCheck[]
+
+  @@map("publisher_vetting_profiles")
+}
+
+model VettingCheck {
+  id               String             @id @default(uuid()) @db.Uuid
+  profileId        String             @map("profile_id") @db.Uuid
+  key              VettingCheckKey
+  status           VettingCheckStatus @default(NOT_STARTED)
+  notes            String?
+  evidenceUrl      String?            @map("evidence_url")
+  checkedAt        DateTime?          @map("checked_at")
+  checkedByUserId  String?            @map("checked_by_user_id") @db.Uuid
+
+  profile PublisherVettingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, key])
+  @@map("vetting_checks")
+}
+
+// ============================================================================
+//  SOURCES & RATES
+// ============================================================================
+
+/// A named traffic sub-source belonging to a publisher. `sourceId` is the
+/// immutable public identifier that travels with every lead through every
+/// table, webhook header, log line and CSV export.
+model LeadSource {
+  id             String    @id @default(uuid()) @db.Uuid
+  sourceId       String    @unique @map("source_id")
+  publisherOrgId String    @map("publisher_org_id") @db.Uuid
+  label          String
+  vertical       Vertical
+  trafficSource  TrafficSource @map("traffic_source")
+  landingPageUrl String?   @map("landing_page_url")
+  active         Boolean   @default(true)
+  apiKeyHash     String?   @map("api_key_hash")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  publisher Organization @relation(fields: [publisherOrgId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+
+  @@index([publisherOrgId])
+  @@map("lead_sources")
+}
+
+/// What the network pays a publisher per accepted lead, by vertical.
+model PublisherRate {
+  id             String   @id @default(uuid()) @db.Uuid
+  publisherOrgId String   @map("publisher_org_id") @db.Uuid
+  vertical       Vertical
+  payoutCpl      Decimal  @map("payout_cpl") @db.Decimal(12, 4)
+  effectiveFrom  DateTime @default(now()) @map("effective_from")
+
+  publisher Organization @relation(fields: [publisherOrgId], references: [id], onDelete: Cascade)
+
+  @@unique([publisherOrgId, vertical])
+  @@map("publisher_rates")
+}
+
+// ============================================================================
+//  BUYER CAMPAIGNS
+// ============================================================================
+
+model BuyerCampaign {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String
+  buyerOrgId        String   @map("buyer_org_id") @db.Uuid
+  vertical          Vertical
+  maxCpl            Decimal  @map("max_cpl") @db.Decimal(12, 4)
+  dailyBudget       Decimal  @map("daily_budget") @db.Decimal(12, 2)
+  dailyCapLeads     Int?     @map("daily_cap_leads")
+  acceptedZips      String[] @map("accepted_zips")
+  acceptedStates    String[] @map("accepted_states")
+  /// Vertical-specific filter tree, e.g. { minAge: 18, maxAge: 64,
+  /// requireHomeowner: true, excludeCreditBands: ["POOR"] }
+  criteriaJson      Json     @default("{}") @map("criteria_json")
+  deliveryWebhookUrl String  @map("delivery_webhook_url")
+  webhookAuthHeader String?  @map("webhook_auth_header")
+  returnWindowHours Int      @default(72) @map("return_window_hours")
+  priority          Int      @default(100)
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  buyer      Organization         @relation(fields: [buyerOrgId], references: [id], onDelete: Cascade)
+  leads      Lead[]
+  dailyStats CampaignDailyStat[]
+  deliveries DeliveryAttempt[]
+
+  @@index([vertical, active])
+  @@index([buyerOrgId])
+  @@map("buyer_campaigns")
+}
+
+/// Pacing ledger. One row per campaign per UTC day; the routing engine reads
+/// this to enforce daily budget and lead caps.
+model CampaignDailyStat {
+  id             String   @id @default(uuid()) @db.Uuid
+  campaignId     String   @map("campaign_id") @db.Uuid
+  statDate       DateTime @map("stat_date") @db.Date
+  leadsDelivered Int      @default(0) @map("leads_delivered")
+  leadsReturned  Int      @default(0) @map("leads_returned")
+  spendAmount    Decimal  @default(0) @map("spend_amount") @db.Decimal(12, 2)
+
+  campaign BuyerCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, statDate])
+  @@map("campaign_daily_stats")
+}
+
+// ============================================================================
+//  LEADS
+// ============================================================================
+
+model Lead {
+  id String @id @db.Uuid
+
+  // --- Immutable intake identity (Rule 2: carries through everything) ---
+  sourceId        String         @map("source_id")
+  leadSourceRefId String?        @map("lead_source_ref_id") @db.Uuid
+  receivedAtUtc   DateTime       @map("received_at_utc")
+  ingressIp       String?        @map("ingress_ip")
+  ingressUserAgent String?       @map("ingress_user_agent")
+  ingressChannel  IngressChannel @default(API) @map("ingress_channel")
+
+  // --- Tenancy ---
+  publisherOrgId String  @map("publisher_org_id") @db.Uuid
+  buyerOrgId     String? @map("buyer_org_id") @db.Uuid
+  campaignId     String? @map("campaign_id") @db.Uuid
+  batchId        String? @map("batch_id") @db.Uuid
+
+  // --- Payload ---
+  vertical Vertical
+  /// Full raw + normalized vertical payload (JSONB).
+  payload  Json
+
+  // Denormalized projections of `payload` for indexing / table filters only.
+  // `payload` remains the source of truth.
+  contactFirstName String? @map("contact_first_name")
+  contactLastName  String? @map("contact_last_name")
+  contactPhone     String? @map("contact_phone")
+  contactEmail     String? @map("contact_email")
+  contactState     String? @map("contact_state")
+  contactZip       String? @map("contact_zip")
+
+  // --- Compliance artifacts ---
+  trustedformCertUrl   String? @map("trustedform_cert_url")
+  jornayaLeadId        String? @map("jornaya_lead_id")
+  consentTextCaptured  String? @map("consent_text_captured")
+  dncScrubPassed       Boolean? @map("dnc_scrub_passed")
+  litigatorScrubPassed Boolean? @map("litigator_scrub_passed")
+  dedupHash            String  @map("dedup_hash")
+
+  // --- Pipeline state ---
+  pipelineStage       PipelineStage        @default(INTAKE) @map("pipeline_stage")
+  rejectionStep       RejectionStep?       @map("rejection_step")
+  rejectionReasonCode RejectionReasonCode? @map("rejection_reason_code")
+  holdReason          RejectionReasonCode? @map("hold_reason")
+  pipelineDurationMs  Int?                 @map("pipeline_duration_ms")
+
+  // --- Commercial state ---
+  buyerStatus            BuyerLeadStatus    @default(PENDING) @map("buyer_status")
+  disputeReasonCode      DisputeReasonCode? @map("dispute_reason_code")
+  disputeNotes           String?            @map("dispute_notes")
+  disputeWindowExpiresAt DateTime?          @map("dispute_window_expires_at")
+  disputedAt             DateTime?          @map("disputed_at")
+  disputeResolvedAt      DateTime?          @map("dispute_resolved_at")
+  disputeResolvedBy      String?            @map("dispute_resolved_by") @db.Uuid
+
+  publisherPayoutAmount Decimal?         @map("publisher_payout_amount") @db.Decimal(12, 4)
+  buyerCostAmount       Decimal?         @map("buyer_cost_amount") @db.Decimal(12, 4)
+  settlementStatus      SettlementStatus @default(UNSETTLED) @map("settlement_status")
+  settledAt             DateTime?        @map("settled_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deliveredAt DateTime? @map("delivered_at")
+
+  publisher  Organization      @relation("PublisherLeads", fields: [publisherOrgId], references: [id])
+  buyer      Organization?     @relation("BuyerLeads", fields: [buyerOrgId], references: [id])
+  campaign   BuyerCampaign?    @relation(fields: [campaignId], references: [id])
+  source     LeadSource?       @relation(fields: [leadSourceRefId], references: [id])
+  batch      CsvBatch?         @relation(fields: [batchId], references: [id])
+  auditTrail LeadAuditTrail[]
+  deliveries DeliveryAttempt[]
+
+  @@index([dedupHash])
+  @@index([publisherOrgId, createdAt])
+  @@index([buyerOrgId, buyerStatus])
+  @@index([pipelineStage, createdAt])
+  @@index([sourceId])
+  @@index([contactPhone])
+  @@index([campaignId, deliveredAt])
+  @@index([disputeWindowExpiresAt])
+  @@map("leads")
+}
+
+/// Append-only. One row per pipeline step execution, with millisecond timing
+/// and the verbatim provider payloads that justified the decision.
+model LeadAuditTrail {
+  id           String               @id @default(uuid()) @db.Uuid
+  leadId       String               @map("lead_id") @db.Uuid
+  sourceId     String               @map("source_id")
+  stepNumber   Int                  @map("step_number")
+  stepName     String               @map("step_name")
+  inputData    Json                 @map("input_data")
+  outputStatus AuditStepStatus      @map("output_status")
+  outputData   Json?                @map("output_data")
+  reasonCode   RejectionReasonCode? @map("reason_code")
+  executionMs  Int                  @map("execution_ms")
+  errorLog     String?              @map("error_log")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, stepNumber])
+  @@map("lead_audit_trail")
+}
+
+model DeliveryAttempt {
+  id             String         @id @default(uuid()) @db.Uuid
+  leadId         String         @map("lead_id") @db.Uuid
+  campaignId     String         @map("campaign_id") @db.Uuid
+  attemptNumber  Int            @map("attempt_number")
+  url            String
+  requestHeaders Json           @map("request_headers")
+  requestBody    Json           @map("request_body")
+  responseStatus Int?           @map("response_status")
+  responseBody   String?        @map("response_body")
+  status         DeliveryStatus @default(PENDING)
+  errorLog       String?        @map("error_log")
+  latencyMs      Int?           @map("latency_ms")
+  nextRetryAt    DateTime?      @map("next_retry_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  lead     Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaign BuyerCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, attemptNumber])
+  @@index([status, nextRetryAt])
+  @@map("delivery_attempts")
+}
+
+// ============================================================================
+//  METRICS & AUTO-SUSPENSION
+// ============================================================================
+
+model PublisherMetrics {
+  publisherOrgId  String    @id @map("publisher_org_id") @db.Uuid
+  totalSubmitted  Int       @default(0) @map("total_submitted")
+  totalDelivered  Int       @default(0) @map("total_delivered")
+  totalReturned   Int       @default(0) @map("total_returned")
+  totalRejected   Int       @default(0) @map("total_rejected")
+  returnRate7d    Float     @default(0) @map("return_rate_7d")
+  returnRate14d   Float     @default(0) @map("return_rate_14d")
+  returnRate30d   Float     @default(0) @map("return_rate_30d")
+  autoSuspendedAt DateTime? @map("auto_suspended_at")
+  lastComputedAt  DateTime  @default(now()) @map("last_computed_at")
+
+  publisher Organization @relation(fields: [publisherOrgId], references: [id], onDelete: Cascade)
+
+  @@map("publisher_metrics")
+}
+
+// ============================================================================
+//  CSV BATCH INTAKE
+// ============================================================================
+
+model CsvBatch {
+  id               String               @id @default(uuid()) @db.Uuid
+  publisherOrgId   String               @map("publisher_org_id") @db.Uuid
+  uploadedByUserId String               @map("uploaded_by_user_id") @db.Uuid
+  filename         String
+  storageUrl       String?              @map("storage_url")
+  status           BatchStatus          @default(UPLOADED)
+  rowCount         Int                  @default(0) @map("row_count")
+  acceptedCount    Int                  @default(0) @map("accepted_count")
+  rejectedCount    Int                  @default(0) @map("rejected_count")
+  integrityFlags   BatchIntegrityFlag[] @map("integrity_flags")
+  /// Per-heuristic detail, e.g. { SEQUENTIAL_PHONE_PATTERN: { runs: 3 } }
+  integrityDetail  Json                 @default("{}") @map("integrity_detail")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  completedAt      DateTime?            @map("completed_at")
+
+  publisher Organization @relation(fields: [publisherOrgId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+
+  @@index([publisherOrgId, createdAt])
+  @@map("csv_batches")
+}
+
+// ============================================================================
+//  SUPPRESSION, ALERTS, ADMIN AUDIT
+// ============================================================================
+
+model SuppressionEntry {
+  id        String              @id @default(uuid()) @db.Uuid
+  phoneE164 String              @map("phone_e164")
+  listType  SuppressionListType @map("list_type")
+  stateCode String?             @map("state_code")
+  note      String?
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@unique([phoneE164, listType])
+  @@index([phoneE164])
+  @@map("suppression_entries")
+}
+
+model Notification {
+  id        String               @id @default(uuid()) @db.Uuid
+  orgId     String               @map("org_id") @db.Uuid
+  severity  NotificationSeverity @default(INFO)
+  /// Enum-style machine code, e.g. "LEAD_REJECTED", "AUTO_SUSPENDED".
+  code      String
+  title     String
+  body      String
+  leadId    String?              @map("lead_id") @db.Uuid
+  readAt    DateTime?            @map("read_at")
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, readAt])
+  @@map("notifications")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String   @map("actor_user_id") @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("admin_audit_log")
+}
