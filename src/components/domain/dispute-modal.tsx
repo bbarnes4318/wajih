@@ -169,10 +169,10 @@ export function DisputeModal({
                   onClick={() => setReasonCode(code)}
                   disabled={window.expired}
                   className={cn(
-                    "rounded-md border px-2.5 py-2 text-left transition-colors disabled:opacity-50",
+                    "min-h-[44px] rounded-md border px-2.5 py-2 text-left transition-colors disabled:opacity-50",
                     selected
                       ? "border-accent bg-accent-soft"
-                      : "border-line bg-sunken hover:border-line-strong",
+                      : "border-line bg-inset hover:border-line-strong",
                   )}
                 >
                   <span

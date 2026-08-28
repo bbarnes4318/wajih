@@ -25,25 +25,33 @@ function isActive(pathname: string, item: NavItem) {
   return pathname === item.href;
 }
 
-export function Sidebar({
-  role,
-  orgName,
-  orgStatus,
-  unreadCount,
-}: {
+export interface SidebarContentProps {
   role: UserRole;
   orgName: string;
   orgStatus: OrgStatus;
   unreadCount: number;
-}) {
+  /** Called after a nav link is activated — used by the mobile drawer to close itself. */
+  onNavigate?: () => void;
+}
+
+/**
+ * The sidebar's actual content — brand, org identity, nav sections, the
+ * notifications footer link. Rendered both inside the fixed desktop rail
+ * (`Sidebar`, below) and inside the mobile drawer (`MobileNavDrawer`), so a
+ * layout or nav change only has to happen once.
+ */
+export function SidebarContent({
+  role,
+  orgName,
+  orgStatus,
+  unreadCount,
+  onNavigate,
+}: SidebarContentProps) {
   const pathname = usePathname();
   const sections = NAV[role];
 
   return (
-    <nav
-      aria-label="Primary"
-      className="flex h-full w-56 shrink-0 flex-col border-r border-line bg-surface"
-    >
+    <nav aria-label="Primary" className="flex h-full w-full flex-col bg-surface">
       {/* Brand */}
       <div className="flex h-14 items-center gap-2.5 border-b border-line px-4">
         <div className="grid size-7 place-items-center rounded-md bg-accent text-body font-bold text-white shadow-[var(--shadow-sm)]">
@@ -87,8 +95,9 @@ export function Sidebar({
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
+                      onClick={onNavigate}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-ui transition-colors",
+                        "group relative flex min-h-[44px] items-center gap-2.5 rounded-md px-2.5 py-2 text-body transition-colors",
                         active
                           ? "bg-accent-soft font-medium text-accent before:absolute before:top-1.5 before:bottom-1.5 before:-left-2.5 before:w-0.5 before:rounded-r before:bg-accent"
                           : "text-muted hover:bg-hover hover:text-ink",
@@ -114,7 +123,8 @@ export function Sidebar({
       <div className="border-t border-line px-4 py-2.5">
         <Link
           href={`${role === "SUPER_ADMIN" ? "/admin" : role === "PUBLISHER" ? "/publisher" : "/buyer"}/notifications`}
-          className="flex items-center justify-between text-xs text-muted transition-colors hover:text-ink"
+          onClick={onNavigate}
+          className="flex min-h-[44px] items-center justify-between text-xs text-muted transition-colors hover:text-ink"
         >
           <span className="flex items-center gap-2">
             <Icons.Bell className="size-3.5 text-faint" />
@@ -126,5 +136,14 @@ export function Sidebar({
         </Link>
       </div>
     </nav>
+  );
+}
+
+/** Fixed desktop rail. Below `lg`, navigation moves into `MobileNavDrawer` instead. */
+export function Sidebar(props: SidebarContentProps) {
+  return (
+    <aside className="hidden w-56 shrink-0 border-r border-line lg:flex">
+      <SidebarContent {...props} />
+    </aside>
   );
 }

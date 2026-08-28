@@ -1,5 +1,7 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/shell/sidebar";
+import { MobileNavDrawer } from "@/components/shell/mobile-nav-drawer";
+import { ShellProvider } from "@/components/shell/shell-context";
 import { requireUser } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db/prisma";
 
@@ -15,17 +17,22 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     where: { orgId: user.orgId, readAt: null },
   });
 
+  const sidebarProps = {
+    role: user.role,
+    orgName: user.orgName,
+    orgStatus: user.orgStatus,
+    unreadCount,
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-dvh overflow-hidden bg-app">
-        <Sidebar
-          role={user.role}
-          orgName={user.orgName}
-          orgStatus={user.orgStatus}
-          unreadCount={unreadCount}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-      </div>
+      <ShellProvider>
+        <div className="flex h-dvh overflow-hidden bg-app">
+          <Sidebar {...sidebarProps} />
+          <MobileNavDrawer {...sidebarProps} />
+          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        </div>
+      </ShellProvider>
     </TooltipProvider>
   );
 }
