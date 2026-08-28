@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CircleCheck, Eye, Gavel, Search } from "lucide-react";
+import { ArrowUp, CircleCheck, Eye, Gavel, Search } from "lucide-react";
 import type { LeadTableRow } from "@/lib/db/lead-view";
 import { cn } from "@/lib/utils";
 import { countdownParts, money, phoneDisplay, utcTimestamp } from "@/lib/format";
@@ -21,6 +21,7 @@ import {
   DisputeReasonChip,
 } from "@/components/domain/status-chip";
 import { useHotkey } from "@/lib/hooks/use-hotkey";
+import { useBuyerLeadStream } from "@/lib/hooks/use-buyer-lead-stream";
 import { acceptLeadAction, acceptLeadsAction } from "../actions";
 import { disputeErrorMessage } from "@/lib/domain/dispute-messages";
 
@@ -50,9 +51,15 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
   const [bulkPending, setBulkPending] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  // Leads pushed by the live stream, held back from the list until the user
+  // clicks the pill — merging under the cursor mid-triage would be worse
+  // than a moment's staleness.
+  const [pendingNew, setPendingNew] = useState<LeadTableRow[]>([]);
+  const [mergedRows, setMergedRows] = useState<LeadTableRow[]>([]);
 
   const rowRefs = useRef<Array<HTMLLIElement | null>>([]);
   const pendingTimers = useRef<Map<string, number>>(new Map());
+  const refreshTimer = useRef<number | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,6 +79,10 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
       return next.size === prev.size ? prev : next;
     });
     setFocusedIndex((i) => Math.min(i, Math.max(0, rows.length - 1)));
+    // A revalidation may have picked up leads the stream already pushed —
+    // drop the now-redundant copies rather than showing a lead twice.
+    setMergedRows((prev) => prev.filter((r) => !validIds.has(r.id)));
+    setPendingNew((prev) => prev.filter((r) => !validIds.has(r.id)));
   }
 
   // The "closing soonest" banner links here with ?focus=1 after navigating
@@ -96,9 +107,42 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
     };
   }, []);
 
+  const knownIds = useMemo(
+    () => new Set([...rows.map((r) => r.id), ...mergedRows.map((r) => r.id)]),
+    [rows, mergedRows],
+  );
+
+  useBuyerLeadStream({
+    onDelivered: (lead) => {
+      setPendingNew((prev) =>
+        knownIds.has(lead.id) || prev.some((r) => r.id === lead.id) ? prev : [...prev, lead],
+      );
+    },
+    onNeedsRefresh: () => {
+      if (refreshTimer.current !== null) return;
+      refreshTimer.current = window.setTimeout(() => {
+        refreshTimer.current = null;
+        router.refresh();
+      }, 2_000);
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
+    };
+  }, []);
+
+  function mergeNewRows() {
+    setMergedRows((prev) => [...pendingNew, ...prev]);
+    setPendingNew([]);
+  }
+
+  const allRows = useMemo(() => [...mergedRows, ...rows], [mergedRows, rows]);
+
   const actionableRows = useMemo(
-    () => rows.filter((r) => isActionable(r, optimisticAccepted.has(r.id))),
-    [rows, optimisticAccepted],
+    () => allRows.filter((r) => isActionable(r, optimisticAccepted.has(r.id))),
+    [allRows, optimisticAccepted],
   );
   const selectedRows = useMemo(
     () => actionableRows.filter((r) => selected.has(r.id)),
@@ -222,13 +266,13 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
 
   function moveFocus(delta: number) {
     setFocusedIndex((i) => {
-      const next = Math.min(Math.max(i + delta, 0), Math.max(0, rows.length - 1));
+      const next = Math.min(Math.max(i + delta, 0), Math.max(0, allRows.length - 1));
       rowRefs.current[next]?.focus();
       return next;
     });
   }
 
-  const focusedLead = rows[focusedIndex] as LeadTableRow | undefined;
+  const focusedLead = allRows[focusedIndex] as LeadTableRow | undefined;
   const focusedActionable =
     focusedLead && isActionable(focusedLead, optimisticAccepted.has(focusedLead.id));
 
@@ -264,58 +308,69 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
   );
   useHotkey("?", () => setShortcutsOpen(true), { enabled: !anyModalOpen });
 
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon={<Search />}
-        title="No leads match these filters"
-        description="Widen the date range, or clear a filter to see your full delivery history."
-      />
-    );
-  }
-
   return (
     <>
-      {actionableRows.length > 0 && (
-        <div className="flex items-center gap-2 border-b border-line px-4 py-2">
-          <label className="flex min-h-[44px] items-center gap-2">
-            <input
-              ref={selectAllRef}
-              type="checkbox"
-              checked={allSelected}
-              onChange={toggleSelectAll}
-              className="size-4 accent-[var(--accent)]"
-              aria-label="Select all in view"
-            />
-            <span className="text-meta text-muted">
-              Select all {actionableRows.length} in view
-            </span>
-          </label>
-        </div>
+      {pendingNew.length > 0 && (
+        <button
+          type="button"
+          onClick={mergeNewRows}
+          className="flex min-h-[44px] w-full items-center justify-center gap-1.5 border-b border-accent-border bg-accent-soft text-meta font-medium text-accent transition-colors hover:opacity-90"
+        >
+          <ArrowUp className="size-3.5" />
+          {pendingNew.length} new since you opened this
+        </button>
       )}
 
-      <ul className="divide-y divide-[var(--border)]">
-        {rows.map((lead, index) => {
-          const optimistic = optimisticAccepted.has(lead.id);
-          const actionable = isActionable(lead, optimistic);
-          const displayStatus = optimistic ? "ACCEPTED" : lead.buyerStatus;
-          const isSelected = selected.has(lead.id);
-          const isFocused = index === focusedIndex;
+      {allRows.length === 0 ? (
+        <EmptyState
+          icon={<Search />}
+          title="No leads match these filters"
+          description="Widen the date range, or clear a filter to see your full delivery history."
+        />
+      ) : (
+        <>
+          {actionableRows.length > 0 && (
+            <div className="flex items-center gap-2 border-b border-line px-4 py-2">
+              <label className="flex min-h-[44px] items-center gap-2">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="size-4 accent-[var(--accent)]"
+                  aria-label="Select all in view"
+                />
+                <span className="text-meta text-muted">
+                  Select all {actionableRows.length} in view
+                </span>
+              </label>
+            </div>
+          )}
 
-          return (
-            <li
-              key={lead.id}
-              ref={(el) => {
-                rowRefs.current[index] = el;
-              }}
-              tabIndex={isFocused ? 0 : -1}
-              onFocus={() => setFocusedIndex(index)}
-              className={cn(
-                "relative flex flex-col gap-2 px-4 py-[var(--density-row-py)] transition-colors hover:bg-hover focus:outline-none lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2",
-                isFocused && "bg-hover ring-1 ring-accent ring-inset",
-                isSelected && "bg-accent-soft/40",
-              )}
-            >
+          <ul className="divide-y divide-[var(--border)]">
+            {allRows.map((lead, index) => {
+              const optimistic = optimisticAccepted.has(lead.id);
+              const actionable = isActionable(lead, optimistic);
+              const displayStatus = optimistic ? "ACCEPTED" : lead.buyerStatus;
+              const isSelected = selected.has(lead.id);
+              const isFocused = index === focusedIndex;
+              const isNewlyMerged = index < mergedRows.length;
+
+              return (
+                <li
+                  key={lead.id}
+                  ref={(el) => {
+                    rowRefs.current[index] = el;
+                  }}
+                  tabIndex={isFocused ? 0 : -1}
+                  onFocus={() => setFocusedIndex(index)}
+                  className={cn(
+                    "relative flex flex-col gap-2 px-4 py-[var(--density-row-py)] transition-colors hover:bg-hover focus:outline-none lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2",
+                    isFocused && "bg-hover ring-1 ring-accent ring-inset",
+                    isSelected && "bg-accent-soft/40",
+                    isNewlyMerged && "row-enter",
+                  )}
+                >
               {/* Countdown, pinned top-right on the mobile card only */}
               {lead.buyerStatus === "PENDING" && !optimistic && (
                 <div className="absolute top-3 right-3 lg:hidden">
@@ -431,7 +486,9 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
             </li>
           );
         })}
-      </ul>
+          </ul>
+        </>
+      )}
 
       {selected.size > 0 && (
         <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-line-strong bg-overlay px-4 py-3 shadow-[var(--shadow-lg)]">
