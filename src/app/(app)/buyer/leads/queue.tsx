@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { CountdownBadge } from "@/components/domain/countdown-badge";
 import { DisputeModal } from "@/components/domain/dispute-modal";
 import { LeadDrawer } from "@/components/domain/lead-drawer";
+import { OutcomeControl } from "@/components/domain/outcome-control";
 import { KeyboardShortcutSheet } from "@/components/domain/keyboard-shortcut-sheet";
 import {
   BuyerStatusChip,
@@ -427,14 +428,20 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
                 </div>
               </div>
 
-              {/* Status — countdown repeats here for lg+, where it isn't pinned */}
+              {/* Status — countdown repeats here for lg+, where it isn't pinned.
+                  Outcome tracking only applies once the lead is no longer
+                  pending (the buyer has decided to keep it), and it takes
+                  the countdown's place rather than adding a third hue
+                  family alongside status + urgency. */}
               <div className="flex min-w-[9rem] flex-row flex-wrap items-center gap-1 lg:flex-col lg:items-start">
                 <BuyerStatusChip status={displayStatus} />
                 {lead.disputeReasonCode && <DisputeReasonChip code={lead.disputeReasonCode} />}
-                {lead.buyerStatus === "PENDING" && !optimistic && (
+                {lead.buyerStatus === "PENDING" && !optimistic ? (
                   <span className="hidden lg:inline-flex">
                     <CountdownBadge expiresAt={lead.disputeWindowExpiresAt} />
                   </span>
+                ) : (
+                  <OutcomeControl leadId={lead.id} outcome={lead.outcome} />
                 )}
               </div>
 
@@ -526,7 +533,16 @@ export function BuyerLeadQueue({ rows }: { rows: LeadTableRow[] }) {
         />
       )}
 
-      <LeadDrawer leadId={inspecting} onClose={() => setInspecting(null)} />
+      <LeadDrawer
+        leadId={inspecting}
+        onClose={() => setInspecting(null)}
+        actions={(lead) => (
+          <div className="mr-auto flex items-center gap-2">
+            <span className="text-meta text-muted">Outcome</span>
+            <OutcomeControl leadId={lead.id} outcome={lead.outcome} />
+          </div>
+        )}
+      />
 
       <KeyboardShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </>

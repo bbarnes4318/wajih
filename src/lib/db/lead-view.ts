@@ -2,6 +2,7 @@ import type {
   BuyerLeadStatus,
   DisputeReasonCode,
   IngressChannel,
+  LeadOutcome,
   PipelineStage,
   RejectionReasonCode,
   RejectionStep,
@@ -53,6 +54,10 @@ export interface LeadTableRow {
   createdAt: string;
   receivedAtUtc: string;
   deliveredAt: string | null;
+  // Buyer-private. `getLeadDetail` strips this for PUBLISHER before it ever reaches here.
+  outcome: LeadOutcome | null;
+  outcomeUpdatedAt: string | null;
+  outcomeValueAmount: string | null;
 }
 
 export function toLeadTableRow(l: LeadRow): LeadTableRow {
@@ -93,6 +98,9 @@ export function toLeadTableRow(l: LeadRow): LeadTableRow {
     createdAt: l.createdAt.toISOString(),
     receivedAtUtc: l.receivedAtUtc.toISOString(),
     deliveredAt: l.deliveredAt?.toISOString() ?? null,
+    outcome: l.outcome,
+    outcomeUpdatedAt: l.outcomeUpdatedAt?.toISOString() ?? null,
+    outcomeValueAmount: l.outcomeValueAmount?.toString() ?? null,
   };
 }
 
@@ -187,6 +195,9 @@ export function toLeadDetailView(l: LeadDetail): LeadDetailView {
     createdAt: l.createdAt.toISOString(),
     receivedAtUtc: l.receivedAtUtc.toISOString(),
     deliveredAt: l.deliveredAt?.toISOString() ?? null,
+    outcome: l.outcome,
+    outcomeUpdatedAt: l.outcomeUpdatedAt?.toISOString() ?? null,
+    outcomeValueAmount: l.outcomeValueAmount?.toString() ?? null,
 
     payload: l.payload,
     consentTextCaptured: l.consentTextCaptured,

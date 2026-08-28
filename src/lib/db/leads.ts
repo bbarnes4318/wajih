@@ -171,6 +171,9 @@ export const LEAD_ROW_SELECT = {
   createdAt: true,
   receivedAtUtc: true,
   deliveredAt: true,
+  outcome: true,
+  outcomeUpdatedAt: true,
+  outcomeValueAmount: true,
   publisher: { select: { id: true, name: true } },
   buyer: { select: { id: true, name: true } },
   campaign: { select: { id: true, name: true } },
@@ -273,9 +276,17 @@ export async function getLeadDetail(user: SessionUser, leadId: string) {
   if (!lead) return null;
 
   // A publisher must not see what the network charged the buyer, and a buyer
-  // must not see what the publisher was paid.
+  // must not see what the publisher was paid. Outcome is buyer-private too —
+  // a buyer's sales performance is not a supply-quality signal a publisher
+  // should ever see.
   if (user.role === "PUBLISHER") {
-    return { ...lead, buyerCostAmount: null };
+    return {
+      ...lead,
+      buyerCostAmount: null,
+      outcome: null,
+      outcomeUpdatedAt: null,
+      outcomeValueAmount: null,
+    };
   }
   if (user.role === "BUYER") {
     return { ...lead, publisherPayoutAmount: null };

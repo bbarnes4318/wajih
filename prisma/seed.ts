@@ -8,6 +8,7 @@ import {
   Prisma,
   PrismaClient,
   type DisputeReasonCode,
+  type LeadOutcome,
   type VettingCheckKey,
   type VettingCheckStatus,
 } from "@prisma/client";
@@ -21,6 +22,7 @@ import {
   SEEDED_SUPPRESSIONS,
   makeRng,
   type PublisherFixture,
+  type Rng,
   type VettingCheckKeyName,
 } from "./seed-data";
 import {
@@ -876,6 +878,71 @@ async function seedCsvBatches(
 }
 
 // ---------------------------------------------------------------------------
+//  5. Buyer sales outcomes (B9)
+// ---------------------------------------------------------------------------
+
+/** Roughly realistic spread across a buyer's own sales pipeline. */
+const OUTCOME_WEIGHTS: Array<{ outcome: LeadOutcome; weight: number }> = [
+  { outcome: "NOT_WORKED", weight: 0.15 },
+  { outcome: "NO_CONTACT", weight: 0.2 },
+  { outcome: "CONTACTED", weight: 0.25 },
+  { outcome: "APPOINTMENT_SET", weight: 0.15 },
+  { outcome: "QUOTED", weight: 0.1 },
+  { outcome: "SOLD", weight: 0.1 },
+  { outcome: "CLOSED_LOST", weight: 0.05 },
+];
+
+function rollOutcome(rng: Rng): LeadOutcome {
+  const total = OUTCOME_WEIGHTS.reduce((sum, o) => sum + o.weight, 0);
+  let roll = rng.next() * total;
+  for (const { outcome, weight } of OUTCOME_WEIGHTS) {
+    if (roll < weight) return outcome;
+    roll -= weight;
+  }
+  return OUTCOME_WEIGHTS[OUTCOME_WEIGHTS.length - 1].outcome;
+}
+
+/**
+ * Buyer-private and entirely separate from the compliance waterfall, so
+ * unlike leads themselves this is written directly rather than through
+ * `ingestLead` — there's no pipeline step to replay. Only leads the buyer
+ * actually kept (ACCEPTED / RETURN_DENIED) get an outcome; a returned lead
+ * was never theirs to work.
+ */
+async function seedBuyerOutcomes() {
+  const rng = makeRng(90909);
+
+  const kept = await prisma.lead.findMany({
+    where: { buyerOrgId: { not: null }, buyerStatus: { in: ["ACCEPTED", "RETURN_DENIED"] } },
+    select: { id: true, deliveredAt: true },
+  });
+
+  let sold = 0;
+  const CHUNK = 25;
+  for (let i = 0; i < kept.length; i += CHUNK) {
+    const batch = kept.slice(i, i + CHUNK);
+    await Promise.all(
+      batch.map((lead) => {
+        const outcome = rollOutcome(rng);
+        if (outcome === "SOLD") sold += 1;
+        const deliveredAt = lead.deliveredAt ?? new Date();
+        return prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            outcome,
+            outcomeUpdatedAt: new Date(deliveredAt.getTime() + rng.int(1, 96) * 3_600_000),
+            outcomeValueAmount:
+              outcome === "SOLD" ? new Prisma.Decimal(rng.int(400, 3200)) : null,
+          },
+        });
+      }),
+    );
+  }
+
+  log(`${kept.length} leads given a buyer outcome (${sold} marked sold)`);
+}
+
+// ---------------------------------------------------------------------------
 //  Main
 // ---------------------------------------------------------------------------
 
@@ -895,6 +962,7 @@ async function main() {
   await seedSuppressions();
   await seedLeadHistory(publishers);
   await seedCsvBatches(publishers);
+  await seedBuyerOutcomes();
 
   const suspended = await recomputeAllPublisherMetrics();
   log(`recomputed metrics for ${suspended} publishers`);

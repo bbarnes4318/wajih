@@ -2,8 +2,10 @@ import type {
   BatchIntegrityFlag,
   BatchStatus,
   BuyerLeadStatus,
+  CampaignApprovalStatus,
   DisputeReasonCode,
   IngressChannel,
+  LeadOutcome,
   NotificationSeverity,
   OrgStatus,
   PipelineStage,
@@ -201,6 +203,27 @@ export const DISPUTE_REASON: Record<DisputeReasonCode, EnumMeta> = {
   DUPLICATE_WITHIN_WINDOW: { label: "Duplicate in Window", tone: "neutral", help: "Buyer already purchased this consumer inside the window." },
   WRONG_PERSON: { label: "Wrong Person", tone: "neutral", help: "Contact reached is not the person who inquired." },
   BOGUS_CONTACT_INFO: { label: "Bogus Contact Info", tone: "neutral", help: "Name, address or email is fabricated." },
+};
+
+/// Buyer-private sales pipeline — never shown to a publisher, never read by
+/// auto-suspension. NOT_WORKED/NO_CONTACT/CLOSED_LOST carry no forward
+/// momentum so they stay neutral; CONTACTED/APPOINTMENT_SET/QUOTED are all
+/// "in progress" and share info; SOLD is the one outcome that's success.
+export const LEAD_OUTCOME: Record<LeadOutcome, EnumMeta> = {
+  NOT_WORKED: { label: "Not worked", tone: "neutral" },
+  NO_CONTACT: { label: "No contact", tone: "neutral", help: "Attempted, consumer not reached." },
+  CONTACTED: { label: "Contacted", tone: "info" },
+  APPOINTMENT_SET: { label: "Appointment set", tone: "info" },
+  QUOTED: { label: "Quoted", tone: "info" },
+  SOLD: { label: "Sold", tone: "success" },
+  CLOSED_LOST: { label: "Closed lost", tone: "neutral", help: "Worked to a close, did not convert." },
+};
+
+export const CAMPAIGN_APPROVAL_STATUS: Record<CampaignApprovalStatus, EnumMeta> = {
+  DRAFT: { label: "Draft", tone: "neutral", help: "Not yet submitted for review." },
+  PENDING_APPROVAL: { label: "Pending approval", tone: "warning", help: "Awaiting network operations review." },
+  APPROVED: { label: "Approved", tone: "success" },
+  REJECTED: { label: "Rejected", tone: "danger" },
 };
 
 export const SETTLEMENT_STATUS: Record<SettlementStatus, EnumMeta> = {

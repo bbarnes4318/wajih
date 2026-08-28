@@ -77,6 +77,7 @@ export const NAV: Record<UserRole, NavSection[]> = {
         { href: "/buyer", label: "Overview", icon: "LayoutDashboard" },
         { href: "/buyer/leads", label: "Delivery Queue", icon: "Inbox", prefix: true },
         { href: "/buyer/campaigns", label: "Campaigns", icon: "Target", prefix: true },
+        { href: "/buyer/performance", label: "Performance", icon: "TrendingUp" },
       ],
     },
     {

@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { DisputeReasonCode } from "@prisma/client";
+import type { DisputeReasonCode, LeadOutcome } from "@prisma/client";
 import { assertRole } from "@/lib/auth/rbac";
 import { acceptLead, fileDispute } from "@/lib/pipeline/settlement";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Buyer-side commercial actions.
@@ -85,4 +86,34 @@ export async function acceptLeadsAction(leadIds: string[]): Promise<BulkAcceptRe
   revalidatePath("/buyer/leads");
   revalidatePath("/buyer");
   return { results };
+}
+
+/**
+ * Buyer's own sales-pipeline annotation on a lead — entirely separate from
+ * `buyerStatus`/`settlementStatus`, so it never touches `pipeline/settlement.ts`.
+ * Never fed into publisher-facing views or auto-suspension: a buyer's sales
+ * performance is not a supply-quality signal.
+ */
+export async function setLeadOutcomeAction(
+  leadId: string,
+  outcome: LeadOutcome,
+  valueAmount?: number | null,
+): Promise<DisputeActionResult> {
+  const user = await assertRole("BUYER");
+  if (!leadId) return { ok: false, error: "MISSING_FIELDS" };
+
+  const result = await prisma.lead.updateMany({
+    where: { id: leadId, buyerOrgId: user.orgId },
+    data: {
+      outcome,
+      outcomeUpdatedAt: new Date(),
+      outcomeValueAmount: outcome === "SOLD" ? (valueAmount ?? null) : null,
+    },
+  });
+
+  if (result.count === 0) return { ok: false, error: "NOT_FOUND" };
+
+  revalidatePath("/buyer/leads");
+  revalidatePath("/buyer/performance");
+  return { ok: true };
 }
