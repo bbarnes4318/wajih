@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatTile } from "@/components/domain/stat-tile";
 import { PacingBar } from "@/components/domain/charts";
 import { CountdownBadge } from "@/components/domain/countdown-badge";
+import { OnboardingChecklist } from "./onboarding-checklist";
 import { DISPUTE_REASON, verticalLabel } from "@/lib/domain/labels";
 import { requireBuyer } from "@/lib/auth/rbac";
 import { prisma } from "@/lib/db/prisma";
@@ -403,6 +404,28 @@ function CampaignPacingSkeleton() {
   );
 }
 
+/**
+ * Only worth checking — and rendering — while the org has never had a
+ * delivered lead. Once real volume exists, hasNoDeliveredLeads is false
+ * forever and this stops running the onboarding-state query entirely.
+ */
+async function OnboardingSection({ orgId }: { orgId: string }) {
+  const [hasDeliveredLeads, org] = await Promise.all([
+    prisma.lead.findFirst({
+      where: { buyerOrgId: orgId, deliveredAt: { not: null } },
+      select: { id: true },
+    }),
+    prisma.organization.findUniqueOrThrow({
+      where: { id: orgId },
+      select: { onboardingSteps: true, onboardingDismissedAt: true },
+    }),
+  ]);
+
+  if (hasDeliveredLeads || org.onboardingDismissedAt) return null;
+
+  return <OnboardingChecklist completedSteps={org.onboardingSteps} />;
+}
+
 export default async function BuyerOverviewPage() {
   const user = await requireBuyer();
 
@@ -423,6 +446,10 @@ export default async function BuyerOverviewPage() {
       />
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 xl:p-6">
+        <Suspense fallback={null}>
+          <OnboardingSection orgId={user.orgId} />
+        </Suspense>
+
         <Suspense fallback={<KpiRowSkeleton />}>
           <KpiRow orgId={user.orgId} />
         </Suspense>

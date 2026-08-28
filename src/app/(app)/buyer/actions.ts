@@ -117,3 +117,38 @@ export async function setLeadOutcomeAction(
   revalidatePath("/buyer/performance");
   return { ok: true };
 }
+
+/**
+ * First-run onboarding checklist (B11), tracked on Organization since it's
+ * account-level progress, not per-user. Idempotent — completing an
+ * already-completed step is a no-op, not an error.
+ */
+export async function completeOnboardingStepAction(step: string): Promise<DisputeActionResult> {
+  const user = await assertRole("BUYER");
+  if (!step) return { ok: false, error: "MISSING_FIELDS" };
+
+  const org = await prisma.organization.findUniqueOrThrow({
+    where: { id: user.orgId },
+    select: { onboardingSteps: true },
+  });
+  if (!org.onboardingSteps.includes(step)) {
+    await prisma.organization.update({
+      where: { id: user.orgId },
+      data: { onboardingSteps: { push: step } },
+    });
+  }
+
+  revalidatePath("/buyer");
+  return { ok: true };
+}
+
+export async function dismissOnboardingAction(): Promise<DisputeActionResult> {
+  const user = await assertRole("BUYER");
+  await prisma.organization.update({
+    where: { id: user.orgId },
+    data: { onboardingDismissedAt: new Date() },
+  });
+
+  revalidatePath("/buyer");
+  return { ok: true };
+}
